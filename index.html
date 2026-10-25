@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wanderson</title>
+<meta name="description" content="Articles by Wanderson.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Work+Sans:wght@400;600&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --bg: #FFF8E7; --surface: #FFFFFF; --ink: #111111; --muted: #4A4A4A; --mark: #FFD23F;
+  --font-display: "Bricolage Grotesque", "Arial Black", sans-serif;
+  --font-body: "Work Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 64px 80px;
+}
+main, footer { max-width: 660px; margin-inline: auto; }
+h1 {
+  display: inline; margin: 0;
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(2.4rem, 1.9rem + 2.4vw, 3.4rem); line-height: 1.05; letter-spacing: -0.035em;
+  background: linear-gradient(transparent 62%, var(--mark) 62%);
+}
+h2 {
+  margin: 56px 0 16px; font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.posts { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.posts a {
+  display: grid; gap: 4px; padding: 14px 18px 16px; color: var(--ink); text-decoration: none;
+  background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; box-shadow: 4px 4px 0 var(--ink);
+}
+.posts a:hover { background: var(--mark); }
+.posts a:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+.posts a:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.date { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.title { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; line-height: 1.15; letter-spacing: -0.025em; }
+.blurb { color: var(--muted); font-size: 0.975rem; line-height: 1.45; }
+footer { margin-top: 64px; font-family: var(--font-mono); font-size: 0.8125rem; color: var(--muted); }
+footer a { color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Wanderson</h1>
+  <h2>Articles</h2>
+  <ul class="posts">
+    <li>
+      <a href="cut-the-slop/">
+        <span class="date">25 Oct 2026</span>
+        <span class="title">Cut the slop</span>
+        <span class="blurb">The keywords I use to shape AI answers, with an interactive keyboard and a slop shredder.</span>
+      </a>
+    </li>
+  </ul>
+</main>
+<footer>© 2026 Wanderson · <a href="https://github.com/wandersonmo">GitHub</a></footer>
+</body>
+</html>
