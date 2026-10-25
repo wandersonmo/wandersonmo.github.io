@@ -1,0 +1,2565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cut the slop</title>
+<meta name="description" content="The keywords I use to shape AI answers, from BLUF to emoji heatmaps, with an interactive keyboard and a slop shredder.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Cut the slop">
+<meta property="og:description" content="The keywords I use to shape AI answers, from BLUF to emoji heatmaps, with an interactive keyboard and a slop shredder.">
+<meta property="og:url" content="https://wandersonmo.github.io/cut-the-slop/">
+<link rel="canonical" href="https://wandersonmo.github.io/cut-the-slop/">
+<style>
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+.crumbs { margin: 0 auto 28px; font-family: "Space Mono", ui-monospace, Menlo, monospace; font-size: 0.8125rem; }
+.crumbs a { color: #111111; text-decoration: none; border-bottom: 2px solid #FFD23F; }
+.crumbs a:hover { background: #FFD23F; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a narrow reading column for the article prose; the board breaks out wider. Step 1 picks a problem; step 2 is the prompt screen, a keyboard with one row per layer, a detail panel for the key you're on, and the output pinned beside them; step 3 is the slop shredder. */
+:root {
+  /* Neubrutalism: a deliberate single light look. */
+  --bg: #FFF8E7;
+  --surface: #FFFFFF;
+  --ink: #111111;
+  --muted: #3F3F3F;
+  --rule: #111111;
+  --accent: #D61F69;
+  --accent-soft: #FFD23F;
+  --warn: #B93D0B;
+  --warn-soft: #FFD9C2;
+  --font-display: "Bricolage Grotesque", "Arial Black", sans-serif;
+  --font-body: "Work Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-label: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --display-weight: 800;
+  --display-case: none;
+  --display-tracking: -0.035em;
+  --body-size: 1.0625rem;
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 64px 96px;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg);
+}
+
+.article { max-width: 660px; margin-inline: auto; }
+.article + .article.section { margin-top: 64px; }
+.wide { max-width: 940px; margin: 40px auto 12px; }
+
+h1 {
+  font-family: var(--font-display); font-weight: var(--display-weight); text-transform: var(--display-case);
+  font-size: clamp(2.5rem, 1.9rem + 2.6vw, 3.6rem); line-height: 1.04;
+  letter-spacing: var(--display-tracking); margin: 0 0 32px; text-wrap: balance;
+}
+h2 {
+  font-family: var(--font-display); font-weight: var(--display-weight); text-transform: var(--display-case);
+  font-size: clamp(2rem, 1.6rem + 1.6vw, 2.6rem); line-height: 1.08;
+  letter-spacing: var(--display-tracking); margin: 0 0 20px; text-wrap: balance;
+}
+.prob .name { font-weight: var(--display-weight); }
+
+.article p { margin: 0 0 1.05em; }
+.step {
+  font-family: var(--font-label); font-weight: 600; font-size: 0.75rem;
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px;
+}
+.step .n { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+.def code, .out code {
+  font-family: var(--font-mono); font-size: 0.85em;
+  background: var(--surface); padding: 1px 5px; border-radius: 3px;
+}
+
+/* Step 1: problem picker */
+.picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 0 0 30px; padding: 0; border: 0; min-width: 0; }
+.prob {
+  position: relative; display: grid; gap: 2px; cursor: pointer;
+  border: 1px solid var(--rule); border-radius: 6px; padding: 12px 16px 14px;
+  background: var(--bg);
+}
+.prob input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.prob .area {
+  font-family: var(--font-label); font-weight: 500; font-size: 0.75rem;
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+}
+.prob .name { font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; line-height: 1.2; }
+.prob.on { border-color: var(--accent); background: var(--accent-soft); }
+.prob.on .area { color: var(--accent); }
+.prob:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .output-panel.flash { animation: flash 0.9s ease-out; }
+  @keyframes flash { from { box-shadow: 0 0 0 2px var(--accent); } to { box-shadow: 0 0 0 2px transparent; } }
+}
+
+/* Step 2: prompt bar */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding-block: 12px 10px;
+  display: grid; gap: 8px;
+}
+.bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.bar-label {
+  font-family: var(--font-label); font-weight: 600; font-size: 0.75rem;
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+}
+.line {
+  flex: 1 1 260px; min-width: 0;
+  font-family: var(--font-mono); font-size: 0.875rem; font-weight: 500;
+  overflow-wrap: anywhere; color: var(--ink); line-height: 1.5;
+}
+.line .q { color: var(--muted); font-weight: 400; }
+.line .empty { color: var(--muted); font-weight: 400; }
+.bar-actions { display: flex; gap: 6px; }
+.btn {
+  font-family: var(--font-label); font-weight: 500; font-size: 0.8125rem;
+  letter-spacing: 0.04em; padding: 4px 11px; border-radius: 4px;
+  border: 1px solid var(--rule); background: var(--bg); color: var(--ink); cursor: pointer;
+}
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:hover { border-color: var(--muted); }
+.btn:focus-visible, .kw:focus-visible, .jump:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.coverage { display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.cov { display: inline-flex; gap: 6px; white-space: nowrap; }
+.cov .on { color: var(--accent); }
+.status { margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--muted); display: grid; gap: 2px; flex: 1 1 280px; min-width: 0; }
+.note { display: block; }
+.note .g { font-family: var(--font-mono); margin-right: 6px; }
+.note.ok .g { color: var(--accent); }
+.note.conflict { color: var(--warn); }
+.note.tension .g { color: var(--muted); }
+.jump { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); text-decoration: none; white-space: nowrap; margin-left: auto; font-variant-numeric: tabular-nums; }
+.jump:hover { text-decoration: underline; }
+
+.kw {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono); font-size: 0.9375rem; font-weight: 500;
+  padding: 4px 11px 4px 9px; border-radius: 4px;
+  border: 1px solid var(--rule); background: transparent; color: var(--ink); cursor: pointer;
+}
+.kw .dot::before { content: "○"; color: var(--muted); }
+.kw[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.kw[aria-pressed="true"] .dot::before { content: "●"; color: var(--accent); }
+.kw.conflict { border-style: dashed; border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+.kw.conflict .dot::before { color: var(--warn); }
+@media (prefers-reduced-motion: no-preference) {
+  .kw, .btn, .prob { transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+}
+.tag {
+  font-family: var(--font-label); font-weight: 500; font-size: 0.6875rem;
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 1px 8px;
+}
+.tag.misfit { color: var(--warn); border-color: var(--warn); }
+.def { margin: 0; font-size: 1rem; line-height: 1.5; }
+.more { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--muted); }
+
+.out {
+  background: var(--surface); border-radius: 5px; padding: 12px 14px;
+  overflow-x: auto; min-width: 0;
+}
+.out pre {
+  margin: 0; font-family: var(--font-mono); font-size: 0.78125rem; line-height: 1.6;
+  white-space: pre; color: var(--ink);
+}
+.out.prose { font-size: 0.9375rem; line-height: 1.5; }
+.out.prose p { margin: 0; }
+.out.prose p + p { margin-top: 5px; }
+.out strong, .out b { font-weight: 600; }
+.dim { color: var(--muted); }
+.out ul.sub { list-style: none; margin: 6px 0 0; padding: 0 0 0 12px; border-left: 1px solid var(--rule); display: grid; gap: 2px; }
+.out ol.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 3px; }
+.out ol.steps li::marker { font-family: var(--font-mono); font-size: 0.8em; color: var(--muted); }
+.out ol.steps code { background: none; padding: 0; }
+.fg-title { font-family: var(--font-label); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.8125rem; margin: 0 0 6px !important; }
+.fg { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; margin: 0; }
+.fg dt { font-family: var(--font-label); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.fg dd { margin: 0; }
+.qq::before { content: "?"; font-family: var(--font-mono); color: var(--muted); margin-right: 8px; }
+.misfit-note { margin: 0 0 8px; font-size: 0.875rem; font-style: italic; color: var(--muted); }
+
+.hm { display: grid; grid-template-columns: max-content repeat(3, max-content); gap: 4px 12px; align-items: center; justify-items: center; font-family: var(--font-mono); font-size: 0.78125rem; }
+.hm .h { color: var(--muted); }
+.hm .r { justify-self: start; color: var(--muted); }
+.hm .c { font-size: 1rem; line-height: 1.2; }
+.legend { margin: 8px 0 0; font-family: var(--font-mono); font-size: 0.71875rem; color: var(--muted); }
+
+.c-high { font-weight: 600; }
+.c-med { color: var(--muted); }
+.c-low { color: var(--muted); opacity: 0.7; }
+
+/* Step 3: composed output */
+.out-step { margin-top: 36px; }
+.output-panel { border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); scroll-margin-top: 160px; overflow: hidden; }
+.output-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 10px 18px; border-bottom: 1px solid var(--rule); }
+.wc { font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.out-body { padding: 18px 20px 20px; display: grid; gap: 12px; font-size: 1.03rem; line-height: 1.6; min-width: 0; }
+.out-body.is-mono { font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.6; background: var(--surface); }
+.out-body p { margin: 0; }
+.out-body .tw { white-space: pre-wrap; }
+.out-body .answer { font-weight: 600; }
+.out-body pre { margin: 0; font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.6; white-space: pre; overflow-x: auto; min-width: 0; }
+.out-body:not(.is-mono) pre, .out-body:not(.is-mono) .fgbox, .out-body:not(.is-mono) .hmbox { background: var(--surface); border-radius: 5px; padding: 10px 12px; }
+.out-body ul.pts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.out-body ul.pts li { display: grid; grid-template-columns: 1.8em minmax(0, 1fr); align-items: baseline; }
+.out-body ul.pts.nested { padding-left: 14px; border-left: 1px solid var(--rule); margin-top: -4px; }
+.out-body .mk { font-family: var(--font-mono); color: var(--muted); }
+.out-body .hmbox { display: grid; gap: 6px; justify-items: start; overflow-x: auto; }
+.out-body .hmbox .legend { margin: 0; }
+.ctag { font-family: var(--font-mono); font-size: 0.8em; white-space: nowrap; }
+.out-body dl.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 14px; margin: 0; }
+.out-body dl.kv dt { font-family: var(--font-label); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.out-body dl.kv dd { margin: 0; }
+
+/* Layer box */
+.layers-box { border: 1px solid var(--ink); border-radius: 6px; margin: 26px 0 28px; overflow: hidden; background: var(--bg); }
+.lb-row {
+  display: grid; grid-template-columns: 7.25rem minmax(0, 1fr) auto; column-gap: 16px; row-gap: 2px;
+  align-items: baseline; padding: 12px 16px; color: var(--ink); text-decoration: none;
+  border-top: 1px solid var(--rule);
+}
+.lb-row:first-child { border-top: 0; }
+.lb-row:hover { background: var(--accent-soft); }
+.lb-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lb-name { grid-column: 1; grid-row: 1; font-family: var(--font-label); font-weight: 600; font-size: 0.875rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.lb-what { grid-column: 2; grid-row: 1; font-size: 1rem; line-height: 1.35; }
+.lb-kws { grid-column: 2; grid-row: 2; font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.5; color: var(--muted); }
+.lb-dots { grid-column: 3; grid-row: 1 / span 2; align-self: center; font-family: var(--font-mono); font-size: 0.8125rem; letter-spacing: 0.08em; color: var(--muted); white-space: nowrap; }
+.lb-dots .on { color: var(--accent); }
+.lb-row:hover .lb-dots::after { content: " ↓"; color: var(--accent); }
+.krow { scroll-margin-top: 24px; }
+
+/* Step 3: comparison */
+.out-body h4 { margin: 6px 0 -4px; font-family: var(--font-body); font-weight: 600; font-size: 1.05rem; line-height: 1.3; }
+.out-body.is-mono h4 { font-family: var(--font-mono); font-size: 0.8125rem; }
+.out-body code { font-family: var(--font-mono); font-size: 0.85em; background: var(--surface); padding: 1px 4px; border-radius: 3px; }
+.out-body.is-mono code { background: none; padding: 0; }
+
+@media (max-width: 560px) {
+  .lb-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .lb-name, .lb-what, .lb-kws { grid-column: 1; grid-row: auto; }
+  .lb-dots { grid-column: 2; grid-row: 1 / span 3; }
+  .picker { grid-template-columns: minmax(0, 1fr); }
+  body { padding-block: 40px 72px; }
+}
+
+/* Step 2: keyboard, live output, detail panel */
+:root { --on: #7CC8FF; --on-soft: #DDF1FF; --tray: #EFE6CF; }
+.board { display: grid; gap: 18px; align-items: start; grid-template-columns: minmax(0, 1fr); grid-template-areas: "screen" "keys" "detail" "out"; }
+.board > .bar { grid-area: screen; position: static; padding: 12px 14px; background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; box-shadow: 4px 4px 0 var(--ink); }
+.board > .keyboard { grid-area: keys; }
+.board > .detail { grid-area: detail; }
+.board > #output { grid-area: out; min-width: 0; }
+@media (min-width: 760px) {
+  .board { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "screen screen" "keys keys" "detail out"; }
+}
+@media (min-width: 1000px) {
+  .board { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr; grid-template-areas: "screen out" "keys out" "detail out" ". out"; }
+  .board > #output { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+  .board .jump { display: none; }
+}
+.keyboard { display: grid; gap: 12px; padding: 14px; background: var(--tray); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 4px 4px 0 var(--ink); }
+.krow { display: grid; gap: 6px; }
+.krow-label { font-family: var(--font-label); font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.keys { display: flex; flex-wrap: wrap; gap: 8px; }
+#layer-visual .key { flex: 1 1 calc(25% - 8px); }
+.ann { color: var(--accent); font-style: italic; }
+.assume strong { font-weight: 700; }
+@media (min-width: 1000px) { .board > #output .out-body { padding: 14px 16px 16px; } }
+.bar-actions { flex-wrap: wrap; }
+.board .btn { white-space: nowrap; }
+@media (max-width: 560px) {
+  #layer-register .key { flex: 1 1 calc(50% - 8px); }
+  #layer-visual .key { flex-basis: calc(33.333% - 8px); }
+  .keyboard .key { padding-inline: 6px; font-size: 0.8125rem; }
+}
+.keyboard .key { position: relative; flex: 1 1 0; min-width: 84px; min-height: 48px; justify-content: center; padding: 8px 10px 6px; font-family: var(--font-body); font-weight: 600; font-size: 0.875rem; line-height: 1.15; text-align: center; white-space: normal; background: var(--surface); color: var(--ink); border: 2px solid var(--ink); border-radius: 7px; box-shadow: 0 4px 0 var(--ink); }
+.keyboard .key .dot { position: absolute; top: 3px; left: 6px; font-size: 0.625rem; line-height: 1; }
+.keyboard .key:hover { transform: translateY(-1px); box-shadow: 0 5px 0 var(--ink); }
+.keyboard .key[aria-pressed="true"] { background: var(--kw-fill); color: var(--ink); border-color: var(--ink); transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.keyboard .key:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.keyboard .key.conflict { border-style: dashed; border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+.keyboard .key.is-on { outline: 3px solid var(--on); outline-offset: 3px; }
+.keyboard .key.misfit::after { content: "!"; position: absolute; top: -9px; right: -9px; width: 20px; height: 20px; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 50%; background: var(--slop); color: #FFFFFF; font-family: var(--font-display); font-size: 0.75rem; font-weight: 800; }
+@media (prefers-reduced-motion: no-preference) { .keyboard .key { transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease; } }
+.detail { display: grid; gap: 10px; min-width: 0; padding: 14px 16px 16px; background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; box-shadow: 4px 4px 0 var(--ink); }
+.d-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.d-layer { font-family: var(--font-label); font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; background: var(--ink); color: var(--surface); padding: 2px 7px; border-radius: 4px; }
+.d-name { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; letter-spacing: -0.03em; line-height: 1.1; }
+.d-tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.d-state { margin: 0; font-family: var(--font-label); font-size: 0.8125rem; color: var(--muted); }
+.d-state.on { color: var(--ink); }
+.d-anim { display: grid; gap: 6px; min-width: 0; }
+.d-cap { margin: 4px 0 0; font-family: var(--font-label); font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.d-before { margin: 0; padding: 10px 12px; border: 2px dashed var(--muted); border-radius: 6px; font-size: 0.9375rem; line-height: 1.55; }
+.d-before .w { border-radius: 2px; }
+.d-before .w.struck { color: var(--muted); background: var(--slop-soft); text-decoration: line-through; text-decoration-color: var(--slop); text-decoration-thickness: 2px; }
+.d-before.dim { opacity: 0.6; }
+.d-after { min-width: 0; opacity: 0; transform: translateY(6px); }
+.d-after.show { opacity: 1; transform: none; }
+.d-replay { justify-self: start; }
+@media (prefers-reduced-motion: no-preference) {
+  .d-before .w { transition: color 0.2s ease, background-color 0.2s ease; }
+  .d-before { transition: opacity 0.3s ease; }
+  .d-after { transition: opacity 0.35s ease, transform 0.35s ease; }
+  #out-body > *, #out-body .ctag { transition: background-color 0.15s ease, box-shadow 0.15s ease; }
+}
+#out-body .lit { background-color: var(--on-soft); box-shadow: 0 0 0 3px var(--on); border-radius: 4px; }
+
+/* Slop shredder */
+:root { --slop: #D61F69; --slop-soft: #FFD6E6; --fix: #B8F27C; --kw-fill: #FFD23F; }
+.shred { margin: 0; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 6px 6px 0 var(--ink); overflow: hidden; overflow: clip; }
+.sh-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 18px; background: var(--kw-fill); border-bottom: 2px solid var(--ink); }
+.sh-title { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; letter-spacing: -0.03em; line-height: 1; }
+.sh-chip { font-family: var(--font-label); font-size: 0.8125rem; padding: 3px 11px; border: 2px solid var(--ink); border-radius: 999px; background: var(--ink); color: var(--kw-fill); }
+.sh-next:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sh-hint { font-family: var(--font-label); font-size: 0.8125rem; color: var(--muted); }
+/* Keep running text at a readable measure in the full-width panels. */
+#out-body > :is(p, ul, h4, .tw), #sh-body > :is(p, ul, h4, .tw) { max-width: 72ch; }
+#output { scroll-margin-top: 24px; }
+#pick-keywords { scroll-margin-top: 24px; }
+.article.closing { margin-top: 56px; }
+.article.closing p { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.45rem, 1.2rem + 1.1vw, 1.95rem); line-height: 1.2; letter-spacing: -0.025em; text-wrap: balance; }
+.sh-meter { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; display: grid; gap: 10px; padding: 16px 18px 14px; background: var(--surface); border-bottom: 2px solid var(--ink); }
+.sh-count { display: flex; align-items: baseline; gap: 8px; }
+.sh-n { font-family: var(--font-display); font-weight: 800; font-size: clamp(2.4rem, 1.8rem + 2.4vw, 3.4rem); line-height: 0.9; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.sh-unit { font-family: var(--font-label); font-size: 0.8125rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.sh-pct { margin-left: auto; font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; letter-spacing: -0.03em; color: var(--slop); font-variant-numeric: tabular-nums; }
+.sh-bar { display: flex; height: 24px; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.sh-bar .seg { display: block; height: 100%; width: 0; flex: none; }
+.sh-bar .seg.on { box-shadow: inset 2px 0 0 var(--ink); }
+.seg.left { background: var(--surface); }
+.seg.keys { background: repeating-linear-gradient(45deg, var(--kw-fill) 0 6px, #FFE793 6px 12px); }
+.seg.filler { background: repeating-linear-gradient(45deg, var(--slop) 0 6px, #EE6FA1 6px 12px); }
+@media (prefers-reduced-motion: no-preference) { .sh-bar .seg { transition: width 0.7s cubic-bezier(.2,.8,.2,1); } }
+.sh-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--font-label); font-size: 0.8125rem; line-height: 1.45; color: var(--muted); }
+.sh-legend .it { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+.sh-legend .sw { width: 14px; height: 14px; border: 2px solid var(--ink); border-radius: 3px; flex: none; }
+.sh-legend .sw.filler { background: var(--slop); }
+.sh-legend .sw.keys { background: var(--kw-fill); }
+.sh-legend .sw.left { background: var(--surface); }
+.sh-legend .cats { color: var(--muted); }
+.sh-prompt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 14px 18px 0; }
+.sh-tag { font-family: var(--font-label); font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; background: var(--ink); color: var(--surface); padding: 2px 7px; border-radius: 4px; }
+.sh-q { font-family: var(--font-mono); font-size: 0.875rem; font-weight: 700; }
+.sh-fmt { flex-basis: 100%; font-family: var(--font-mono); font-size: 0.8125rem; background: var(--kw-fill); border: 2px solid var(--ink); border-radius: 4px; padding: 2px 8px; overflow-wrap: anywhere; }
+#sh-body { display: block; padding: 14px 18px 18px; font-size: 1rem; }
+#sh-body > * { margin: 0 0 12px; }
+#sh-body > :last-child { margin-bottom: 0; }
+#sh-body > h4 { margin: 4px 0 6px; }
+#sh-body.is-mono { background: var(--surface); }
+.slop { border-radius: 3px; background-repeat: no-repeat; background-image: linear-gradient(var(--slop), var(--slop)); background-size: 0% 3px; background-position: 0 56%; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.slop.hit { background-color: var(--slop-soft); background-size: 100% 3px; }
+.slop.hit::before { content: attr(data-cat); display: inline-block; margin-right: 5px; padding: 1px 5px; border-radius: 3px; background: var(--slop); color: #FFFFFF; font-family: var(--font-label); font-size: 0.62em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: 0.15em; line-height: 1.4; }
+.slop.gone { font-size: 0; opacity: 0; }
+.repl { font-size: 0; opacity: 0; border-radius: 3px; }
+.repl.in { font-size: 1em; opacity: 1; background: var(--fix); }
+.repl.in.settled { background: transparent; }
+@media (prefers-reduced-motion: no-preference) {
+  .slop { transition: background-size 0.35s ease, background-color 0.2s ease, font-size 0.5s ease, opacity 0.4s ease; }
+  .repl { transition: font-size 0.5s ease, opacity 0.5s ease, background-color 1s ease; }
+  #sh-body { transition: opacity 0.25s ease; }
+}
+#sh-body.fading { opacity: 0; }
+.sh-actions { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 18px max(18px, env(safe-area-inset-bottom, 0px)); border-top: 2px solid var(--ink); background: var(--bg); }
+.btn.sh-go { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; padding: 8px 18px; background: var(--slop); border-color: var(--ink); color: #FFFFFF; }
+.btn.sh-go.kw-step { background: var(--kw-fill); color: var(--ink); }
+.btn.sh-go:disabled { opacity: 0.6; cursor: progress; }
+.sh-next { font-family: var(--font-label); font-weight: 700; color: var(--ink); }
+#four-layers { scroll-margin-top: 24px; }
+#cut { margin-top: 56px; }
+@media (max-width: 560px) {
+  .sh-head, .sh-meter, .sh-actions { padding-left: 14px; padding-right: 14px; }
+  .sh-prompt { padding: 12px 14px 0; }
+  #sh-body { padding: 12px 14px 16px; }
+}
+
+/* Neubrutalism components */
+body :is(.layers-box, .prob, .out, .output-panel, .btn) { border: 2px solid #111111; box-shadow: 4px 4px 0 #111111; border-radius: 8px; }
+body .kw { border: 2px solid #111111; box-shadow: 3px 3px 0 #111111; border-radius: 6px; }
+body :is(.kw, .btn):active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #111111; }
+body .kw[aria-pressed="true"], body .kw[aria-pressed="true"] .dot::before { color: #111111; }
+body .kw[aria-pressed="true"] { background: #FFD23F; border-color: #111111; }
+body .prob.on { background: #B8F27C; border-color: #111111; }
+body .prob.on .area { color: #111111; }
+body .lb-row { border-top: 2px solid #111111; }
+body .lb-row:first-child { border-top: 0; }
+body .lb-row:hover { background: #FFD23F; }
+body h1 { display: inline; background: linear-gradient(transparent 62%, #FFD23F 62%); }
+body h1 + p { margin-top: 32px; }
+body h2 { display: inline-block; background: #B8F27C; border: 2px solid #111111; box-shadow: 4px 4px 0 #111111; padding: 2px 12px 4px; }
+body .bar { border-top-width: 3px; }
+
+</style>
+</head>
+<body>
+<nav class="crumbs article"><a href="../">← All articles</a></nav>
+<div class="article">
+  <h1>Cut the slop</h1>
+  <p>It's been getting harder to keep up with AI responses. Ask a simple question and you get a full article: a pile of caveats, a recap of what you just asked, and an offer to help further.</p>
+  <p>Most of the time, we don't need all of it. We just want to get to the other side: the answer, the next step, whatever unblocks us.</p>
+  <p>People solved this problem long before AI. Wherever attention was scarce and the stakes were high, they built conventions for communicating without noise. The military puts the bottom line up front (BLUF). Aircraft maintenance manuals are written in ASD-STE100, a controlled English dictionary. Consultants structure arguments with the pyramid principle.</p>
+  <p>AI models were trained on text full of these conventions, so established terms work as compressed pointers to them. Ask for a "TL;DR" and you'll usually get a short bulleted summary, without ever explaining what TL;DR means.</p>
+  <p>That's how I've been working for a while: a short list of easy-to-remember keywords at the end of a prompt that reshape the answer. My day job is troubleshooting Spark workloads. I'm often in the middle of a messy root-cause analysis under a tight mitigation deadline, and I need to grasp a complex issue at a glance. Keywords are how I get there.</p>
+  <p>This post covers the ones I use. I've tested each one on a handful of problems, alone and then stacked together, so you can see exactly what each one does.</p>
+</div>
+
+<div class="article section">
+  <h2 id="four-layers">Four layers</h2>
+  <p>Each one controls a different part of the answer, and they fall into four layers: structure, register, visual encoding, and epistemics.</p>
+  <nav class="layers-box" aria-label="The four layers">
+    <a class="lb-row" href="#layer-structure">
+      <span class="lb-name">Structure</span>
+      <span class="lb-what">What comes first, and how the answer is ordered.</span>
+      <span class="lb-kws">BLUF · pyramid principle · field guide</span>
+      <span class="lb-dots" data-layer="0"><span class="on">●</span>○○○</span>
+    </a>
+    <a class="lb-row" href="#layer-register">
+      <span class="lb-name">Register</span>
+      <span class="lb-what">How the sentences sound.</span>
+      <span class="lb-kws">telegraphic · hemingway · ASD-STE100 · layman</span>
+      <span class="lb-dots" data-layer="1">○○○</span>
+    </a>
+    <a class="lb-row" href="#layer-visual">
+      <span class="lb-name">Visual</span>
+      <span class="lb-what">What the answer looks like.</span>
+      <span class="lb-kws">monospaced · glyphs · emoji · emoji heatmap · sparklines · tufte · annotated</span>
+      <span class="lb-dots" data-layer="2"><span class="on">●●●</span>○○○</span>
+    </a>
+    <a class="lb-row" href="#layer-epistemics">
+      <span class="lb-name">Epistemics</span>
+      <span class="lb-what">How far to trust each claim.</span>
+      <span class="lb-kws">confidence-tagged · labeled assumptions</span>
+      <span class="lb-dots" data-layer="3"><span class="on">●</span></span>
+    </a>
+  </nav>
+  <p>Pick a problem first, then keywords. Every keyword shows a small sample of the shape it gives that answer, and the prompt builds itself as you go. It starts with my daily stack.</p>
+</div>
+
+<section class="wide" aria-label="Keywords by layer">
+  <p class="step"><span class="n">1</span>Pick a problem</p>
+  <fieldset class="picker" id="picker">
+    <legend hidden>Problem</legend>
+    <label class="prob on" for="prob-delta">
+      <input type="radio" name="problem" id="prob-delta" value="delta" checked>
+      <span class="area">Tech</span>
+      <span class="name">Delta Lake transaction log</span>
+    </label>
+    <label class="prob" for="prob-hegel">
+      <input type="radio" name="problem" id="prob-hegel" value="hegel">
+      <span class="area">Philosophy</span>
+      <span class="name">Hegel's dialectic</span>
+    </label>
+    <label class="prob" for="prob-econ">
+      <input type="radio" name="problem" id="prob-econ" value="econ">
+      <span class="area">Economics</span>
+      <span class="name">What causes inflation?</span>
+    </label>
+    <label class="prob" for="prob-pct">
+      <input type="radio" name="problem" id="prob-pct" value="pct">
+      <span class="area">Stats</span>
+      <span class="name">What do p50 and p90 mean?</span>
+    </label>
+  </fieldset>
+
+  <p class="step" id="pick-keywords"><span class="n">2</span>Build your prompt</p>
+  <div class="board" id="board">
+    <div class="bar" role="region" aria-label="Prompt builder">
+      <div class="bar-row">
+        <span class="bar-label">Prompt</span>
+        <code class="line" id="line"><span class="q" id="line-q">Explain the Delta Lake transaction log.</span><br><span id="line-f">Format: BLUF, monospaced, glyphs, emoji, confidence-tagged</span></code>
+        <div class="bar-actions">
+          <button class="btn primary" type="button" id="copy">Copy</button>
+          <button class="btn" type="button" id="mine">My stack</button>
+          <button class="btn" type="button" id="suggested">Suggested</button>
+          <button class="btn" type="button" id="clear">Clear</button>
+        </div>
+      </div>
+      <div class="bar-row">
+        <div class="coverage" id="coverage" aria-label="Layer coverage" hidden>
+          <span class="cov"><span>Structure</span><span><span class="on">●</span>○○○</span></span>
+          <span class="cov"><span>Register</span><span>○○○</span></span>
+          <span class="cov"><span>Visual</span><span><span class="on">●●●</span>○○○</span></span>
+          <span class="cov"><span>Epistemics</span><span><span class="on">●</span></span></span>
+        </div>
+        <p class="status" id="status" aria-live="polite"><span class="note ok"><span class="g">✓</span>Stacks cleanly across 3 of 4 layers.</span></p>
+        <a class="jump" href="#output"><span id="wc-bar">≈ 60 words</span> · Output ↓</a>
+      </div>
+    </div>
+      <div class="keyboard" id="keyboard" role="group" aria-label="Keywords">
+      <div class="krow" id="layer-structure">
+        <span class="krow-label">Structure</span>
+        <div class="keys">
+          <button class="kw key" type="button" id="kw-bluf" data-kw="bluf" aria-pressed="true"><span class="dot" aria-hidden="true"></span>BLUF</button>
+          <button class="kw key" type="button" id="kw-pyramid" data-kw="pyramid" aria-pressed="false"><span class="dot" aria-hidden="true"></span>pyramid principle</button>
+          <button class="kw key" type="button" id="kw-fieldguide" data-kw="fieldguide" aria-pressed="false"><span class="dot" aria-hidden="true"></span>field guide</button>
+        </div>
+      </div>
+      <div class="krow" id="layer-register">
+        <span class="krow-label">Register</span>
+        <div class="keys">
+          <button class="kw key" type="button" id="kw-telegraphic" data-kw="telegraphic" aria-pressed="false"><span class="dot" aria-hidden="true"></span>telegraphic</button>
+          <button class="kw key" type="button" id="kw-hemingway" data-kw="hemingway" aria-pressed="false"><span class="dot" aria-hidden="true"></span>hemingway</button>
+          <button class="kw key" type="button" id="kw-ste" data-kw="ste" aria-pressed="false"><span class="dot" aria-hidden="true"></span>ASD-STE100</button>
+          <button class="kw key" type="button" id="kw-layman" data-kw="layman" aria-pressed="false"><span class="dot" aria-hidden="true"></span>layman</button>
+        </div>
+      </div>
+      <div class="krow" id="layer-visual">
+        <span class="krow-label">Visual</span>
+        <div class="keys">
+          <button class="kw key" type="button" id="kw-monospaced" data-kw="monospaced" aria-pressed="true"><span class="dot" aria-hidden="true"></span>monospaced</button>
+          <button class="kw key" type="button" id="kw-glyphs" data-kw="glyphs" aria-pressed="true"><span class="dot" aria-hidden="true"></span>glyphs</button>
+          <button class="kw key" type="button" id="kw-emoji" data-kw="emoji" aria-pressed="true"><span class="dot" aria-hidden="true"></span>emoji</button>
+          <button class="kw key" type="button" id="kw-heatmap" data-kw="heatmap" aria-pressed="false"><span class="dot" aria-hidden="true"></span>emoji heatmap</button>
+          <button class="kw key" type="button" id="kw-sparklines" data-kw="sparklines" aria-pressed="false"><span class="dot" aria-hidden="true"></span>sparklines</button>
+          <button class="kw key" type="button" id="kw-tufte" data-kw="tufte" aria-pressed="false"><span class="dot" aria-hidden="true"></span>tufte</button>
+          <button class="kw key" type="button" id="kw-annotated" data-kw="annotated" aria-pressed="false"><span class="dot" aria-hidden="true"></span>annotated</button>
+        </div>
+      </div>
+      <div class="krow" id="layer-epistemics">
+        <span class="krow-label">Epistemics</span>
+        <div class="keys">
+          <button class="kw key" type="button" id="kw-confidence" data-kw="confidence" aria-pressed="true"><span class="dot" aria-hidden="true"></span>confidence-tagged</button>
+          <button class="kw key" type="button" id="kw-assumptions" data-kw="assumptions" aria-pressed="false"><span class="dot" aria-hidden="true"></span>labeled assumptions</button>
+        </div>
+      </div>
+    </div>
+    <div class="detail" id="detail" aria-live="polite">
+      <div class="d-head">
+        <span class="d-layer" id="d-layer">Structure</span>
+        <span class="d-name" id="d-name">BLUF</span>
+        <span class="d-tags" id="d-tags"></span>
+      </div>
+      <p class="def" id="d-def"></p>
+      <p class="more" id="d-more" hidden></p>
+      <p class="d-state" id="d-state"></p>
+      <div class="d-anim">
+        <p class="d-cap">Without this keyword</p>
+        <p class="d-before" id="d-before"></p>
+        <p class="d-cap">With this keyword</p>
+        <div class="d-after" id="d-after"></div>
+      </div>
+      <button class="btn d-replay" type="button" id="d-replay">↻ Replay</button>
+    </div>
+    <div class="output-panel" id="output">
+    <div class="output-head">
+      <span class="bar-label">Your keywords</span>
+      <span class="wc" id="wc"></span>
+    </div>
+    <div class="out-body" id="out-body"></div>
+  </div>
+  </div>
+  <div id="spec-data" hidden>
+    <div class="spec-data" data-spec="layman">
+      <p class="def">Everyday words instead of jargon, with nothing dumbed down.</p>
+      <p class="more">Unlike ELI5, it keeps the substance and only swaps the vocabulary.</p>
+    </div>
+    <div class="spec-data" data-spec="annotated">
+      <p class="def">Callouts beside a drawing or block that point at what matters.</p>
+      <p class="more">The note sits next to the line it explains, not in a paragraph below.</p>
+      <div class="out" data-p="delta"><pre>_delta_log/
+├─ …0040.checkpoint.parquet   ← full table state
+├─ …0041.json                 ← one commit
+├─ …0042.json                 ← newest = current
+└─ _last_checkpoint           ← where to start</pre></div>
+      <div class="out" data-p="hegel" hidden><pre>being  ↔  nothing     ← pass into each other
+  └────┬─────┘
+   becoming           ← their unity
+       │
+determinate being     ← becoming comes to rest</pre></div>
+      <div class="out" data-p="econ" hidden><pre>demand ↑ ─┐                 ← 2021 stimulus
+          ├─→ prices ↑
+supply ↓ ─┘                 ← 2022 energy shock
+prices ↑ ─→ expectations ↑  ← how it sticks</pre></div>
+      <div class="out" data-p="pct" hidden><pre>80 90 95 100 105 110 120 150 400 1200 ms
+             ───             ───
+             p50 ← half are faster
+                             p90 ← 1 in 10 slower</pre></div>
+    </div>
+    <div class="spec-data" data-spec="assumptions">
+      <p class="def">States up front what the answer takes as given, so you can check those first.</p>
+      <p class="more">Confidence says how sure a claim is. Assumptions say what the model had to fill in.</p>
+      <div class="out" data-p="delta"><pre>[assumed] open-source Delta, default settings
+[assumed] one table, occasional writers
+checkpoint every 10 commits; conflicts will be rare</pre></div>
+      <div class="out" data-p="hegel" hidden><pre>[assumed] the logical dialectic (Encyclopaedia, Logic)
+[assumed] a general reader, not a specialist
+it moves by determinate negation, not by formula</pre></div>
+      <div class="out" data-p="econ" hidden><pre>[assumed] the US, last few decades
+[assumed] consumer prices, not asset prices
+2022 was mostly a supply shock</pre></div>
+      <div class="out" data-p="pct" hidden><pre>[assumed] latency per request, in ms
+[assumed] a small example; real tools use far more requests
+p50 ≈ 105 ms, p90 = 400 ms</pre></div>
+    </div>
+    <div class="spec-data" data-spec="bluf">
+      <p class="def">Bottom line up front. The answer goes in the first line, and details follow.</p>
+      <div class="out prose" data-p="pct" hidden="">
+<p><strong>p50 is the median: half your requests are faster. p90 is the line the slowest 10% cross.</strong></p>
+<p class="dim">Together they show the typical case and the tail that averages hide.</p>
+</div>
+      <div class="out prose" data-p="econ" hidden="">
+<p><strong>Inflation happens when spending outruns what the economy can produce, or when supply shocks push costs up.</strong></p>
+<p class="dim">Expectations decide whether the jump fades or sticks.</p>
+</div>
+      <div class="out prose" data-p="hegel" hidden="">
+<p><strong>Hegel's dialectic is how a concept develops by running into its own limits.</strong></p>
+<p class="dim">Each one-sided idea, pushed far enough, turns into its opposite. What comes out keeps both.</p>
+</div>
+      <div class="out prose" data-p="delta">
+<p><strong>The transaction log is an ordered list of JSON commits that defines what the table is.</strong></p>
+<p class="dim">Readers replay it to get a snapshot. Writers append to it, one version at a time.</p>
+</div>
+    </div>
+    <div class="spec-data" data-spec="pyramid">
+      <p class="def">One governing answer, with the supporting points grouped under it.</p>
+      <div class="out prose" data-p="pct" hidden="">
+<p><strong>Percentiles describe the spread, not just the middle.</strong></p>
+<ul class="sub">
+<li>p50: half the values are at or below it (the median).</li>
+<li>p90: 90% are at or below it, so 1 in 10 is slower.</li>
+<li>The gap between them shows how bad the tail is.</li>
+</ul>
+</div>
+      <div class="out prose" data-p="econ" hidden="">
+<p><strong>Inflation comes from too much demand, too little supply, or expectations that feed on themselves.</strong></p>
+<ul class="sub">
+<li>Demand-pull: spending outruns output.</li>
+<li>Cost-push: shocks raise costs, like energy in 2022.</li>
+<li>Expectations: wages and prices build in more inflation.</li>
+</ul>
+</div>
+      <div class="out prose" data-p="hegel" hidden="">
+<p><strong>The dialectic is a concept's own movement, not a method applied from outside.</strong></p>
+<ul class="sub">
+<li>Understanding fixes a concept as stable and one-sided.</li>
+<li>Thought through, the concept passes into its opposite.</li>
+<li>The result keeps what was true in both.</li>
+</ul>
+</div>
+      <div class="out prose" data-p="delta">
+<p><strong>The log turns plain files into a table with transactions.</strong></p>
+<ul class="sub">
+<li>Each commit is one JSON file, named by its version.</li>
+<li>Only one writer can create each version.</li>
+<li>Checkpoints keep replays short.</li>
+</ul>
+</div>
+    </div>
+    <div class="spec-data" data-spec="fieldguide">
+      <p class="def">Identifying marks and look-alikes, the way a birdwatching guide tells species apart.</p>
+      <div class="out prose" data-p="pct" hidden="">
+<p class="fg-title">p90 latency</p>
+<dl class="fg">
+<dt>Field marks</dt><dd>a "p", a percentage, and a time in ms</dd>
+<dt>Found in</dt><dd>dashboards, SLOs, Spark task metrics</dd>
+<dt>Confused with</dt><dd>the average, or "90% of the max"</dd>
+</dl>
+</div>
+      <div class="out prose" data-p="econ" hidden="">
+<p class="fg-title">Inflation</p>
+<dl class="fg">
+<dt>Field marks</dt><dd>a broad, persistent rise in prices</dd>
+<dt>Found in</dt><dd>CPI reports, wage talks, central bank statements</dd>
+<dt>Confused with</dt><dd>a one-off price jump in a single good</dd>
+</dl>
+</div>
+      <div class="out prose" data-p="hegel" hidden="">
+<p class="fg-title">Hegelian dialectic</p>
+<dl class="fg">
+<dt>Field marks</dt><dd>determinate negation, Aufhebung, self-movement</dd>
+<dt>Found in</dt><dd><em>Science of Logic</em>, <em>Encyclopaedia</em> §79–82</dd>
+<dt>Confused with</dt><dd>thesis–antithesis–synthesis (Fichte, Chalybäus)</dd>
+</dl>
+</div>
+      <div class="out prose" data-p="delta">
+<p class="fg-title">_delta_log</p>
+<dl class="fg">
+<dt>Field marks</dt><dd>numbered JSON commits, Parquet checkpoints</dd>
+<dt>Found in</dt><dd>the root folder of every Delta table</dd>
+<dt>Confused with</dt><dd>the Hive metastore</dd>
+</dl>
+</div>
+    </div>
+    <div class="spec-data" data-spec="telegraphic">
+      <p class="def">Drops articles and filler words, like a telegram billed by the word.</p>
+      <div class="out prose" data-p="pct" hidden=""><p>p50 = median. Half faster, half slower. p90 = 90% faster, 10% slower. Big gap = long tail.</p></div>
+      <div class="out prose" data-p="econ" hidden=""><p>Demand &gt; supply, prices up. Supply shocks raise costs. Expectations lock it in. Rates up to cool demand.</p></div>
+      <div class="out prose" data-p="hegel" hidden=""><p>Concept fixed, one-sided. Pushed far, contradicts itself. Passes into opposite. Result keeps both. Not thesis-antithesis-synthesis.</p></div>
+      <div class="out prose" data-p="delta"><p>Log = ordered JSON commits in _delta_log. Table = replay of add/remove. One writer per version. Checkpoint every 10 commits.</p></div>
+    </div>
+    <div class="spec-data" data-spec="hemingway">
+      <p class="def">Short, plain sentences, with full grammar kept.</p>
+      <div class="out prose" data-p="pct" hidden=""><p>Line up every request from fastest to slowest. The one in the middle is p50. Walk nine tenths of the way down the line. That one is p90. Everything after it is your slow tail.</p></div>
+      <div class="out prose" data-p="econ" hidden=""><p>Prices rise when people want more than the economy can make. Shocks to supply push costs up too. If everyone expects higher prices, they ask for more, and inflation sticks.</p></div>
+      <div class="out prose" data-p="hegel" hidden=""><p>Take an idea and hold it firm. Push it far enough and it breaks against itself. The break is not empty. It shows what the idea lacked, and the next idea keeps both.</p></div>
+      <div class="out prose" data-p="delta"><p>The log is a list of numbered JSON files. Each file is one commit. Replay them and you get the table. Only one writer can claim each number.</p></div>
+    </div>
+    <div class="spec-data" data-spec="ste">
+      <p class="def">Simplified Technical English: approved words only, short sentences, one instruction per sentence.</p>
+      <p class="more">Written for aircraft maintenance manuals.</p>
+      <div class="out prose" data-p="pct" hidden="">
+<ol class="steps">
+<li>Sort the response times from the lowest to the highest.</li>
+<li>Find the value at 50% of the list. This value is p50.</li>
+<li>Find the value at 90% of the list. This value is p90.</li>
+</ol>
+</div>
+      <div class="out prose" data-p="econ" hidden="">
+<ol class="steps">
+<li>Find the CPI for the last 12 months.</li>
+<li>Compare core CPI with headline CPI.</li>
+<li>If core CPI also increases, the cause is not only food and energy.</li>
+</ol>
+</div>
+      <div class="out prose" data-p="hegel" hidden="">
+<ol class="steps">
+<li>Read §79 to §82 of the <em>Encyclopaedia Logic</em> first.</li>
+<li>Find the three moments of the logical.</li>
+<li>Then read the start of the <em>Science of Logic</em>. It shows the method on being and nothing.</li>
+</ol>
+</div>
+      <div class="out prose" data-p="delta">
+<ol class="steps">
+<li>Open the <code>_delta_log</code> folder of the table.</li>
+<li>Find the newest JSON file. Its number is the current version.</li>
+<li>Read the <code>_last_checkpoint</code> file to find the newest checkpoint.</li>
+</ol>
+</div>
+    </div>
+    <div class="spec-data" data-spec="monospaced">
+      <p class="def">Fixed-width text, so columns and tables line up.</p>
+      <div class="out" data-p="pct" hidden=""><pre>+--------+---------+--------------------+
+| metric | value   | meaning            |
++--------+---------+--------------------+
+| mean   | 245 ms  | skewed by outliers |
+| p50    | 105 ms  | half are faster    |
+| p90    | 400 ms  | 1 in 10 is slower  |
+| max    | 1200 ms | the worst one      |
++--------+---------+--------------------+</pre></div>
+      <div class="out" data-p="econ" hidden=""><pre>+--------------+-------------------------+
+| driver       | example                 |
++--------------+-------------------------+
+| demand-pull  | 2021 stimulus, savings  |
+| cost-push    | 2022 energy shock       |
+| expectations | 1970s wage-price spiral |
++--------------+-------------------------+</pre></div>
+      <div class="out" data-p="hegel" hidden=""><pre>+----+---------------+------------------+
+| §  | moment        | does             |
++----+---------------+------------------+
+| 80 | understanding | fixes a concept  |
+| 81 | dialectical   | negates itself   |
+| 82 | speculative   | unites opposites |
++----+---------------+------------------+</pre></div>
+      <div class="out" data-p="delta"><pre>+------------+------------------------+
+| action     | means                  |
++------------+------------------------+
+| add        | new data file          |
+| remove     | file leaves table      |
+| metaData   | schema, properties     |
+| protocol   | reader/writer versions |
+| commitInfo | who, when, what        |
++------------+------------------------+</pre></div>
+    </div>
+    <div class="spec-data" data-spec="glyphs">
+      <p class="def">Box-drawing characters and symbols, so the model draws the explanation: boxes, arrows, trees.</p>
+      <div class="out" data-p="pct" hidden=""><pre>1   2   3   4   5   6   7   8   9   10
+●───●───●───●───●───●───●───●───●───●
+                ↑               ↑
+               p50             p90
+              105 ms          400 ms</pre></div>
+      <div class="out" data-p="econ" hidden=""><pre>demand ↑ ─┐
+          ├─→ prices ↑ ─→ expectations ↑
+supply ↓ ─┘       ↑               │
+                  └───────────────┘</pre></div>
+      <div class="out" data-p="hegel" hidden=""><pre>being  ↔  nothing
+  └────┬─────┘
+   becoming ──→ determinate being ──→ …</pre></div>
+      <div class="out" data-p="delta"><pre>_delta_log/
+├─ …0040.checkpoint.parquet ─┐
+├─ …0041.json ───────────────┤
+├─ …0042.json ───────────────┤
+└─ _last_checkpoint          ↓
+                        snapshot v42</pre></div>
+    </div>
+    <div class="spec-data" data-spec="emoji">
+      <p class="def">Color-coded status you read before the words.</p>
+      <div class="out" data-p="pct" hidden=""><pre>🟢 p50 105 ms: the typical request is fine
+🟡 p90 400 ms: 1 in 10 waits ~4× longer
+🔴 max 1200 ms: one request is 11× the median</pre></div>
+      <div class="out" data-p="econ" hidden=""><pre>🔴 headline CPI: 9.1% peak, June 2022
+🟡 core prices: slower to cool
+🟢 long-run expectations: anchored</pre></div>
+      <div class="out" data-p="hegel" hidden=""><pre>🟢 driven by determinate negation
+🟢 the result keeps both sides
+🔴 thesis–antithesis–synthesis (Fichte)</pre></div>
+      <div class="out" data-p="delta"><pre>🟢 atomic commits on object storage
+🟡 conflicts on overlapping writes
+🔴 VACUUM ends time travel</pre></div>
+    </div>
+    <div class="spec-data" data-spec="heatmap">
+      <span class="tag">coined term</span>
+      <p class="def">A grid of colored squares that shows intensity across rows and columns.</p>
+      <div class="out" data-p="pct" hidden="">
+<div aria-label="Heatmap of p50, p90 and p99 latency against target for four endpoints" class="hm" role="img">
+<span></span><span class="h">p50</span><span class="h">p90</span><span class="h">p99</span>
+<span class="r">login</span><span class="c">🟩</span><span class="c">🟩</span><span class="c">🟨</span>
+<span class="r">search</span><span class="c">🟩</span><span class="c">🟨</span><span class="c">🟥</span>
+<span class="r">checkout</span><span class="c">🟩</span><span class="c">🟩</span><span class="c">🟩</span>
+<span class="r">report</span><span class="c">🟨</span><span class="c">🟥</span><span class="c">🟥</span>
+</div>
+<p class="legend">🟩 under target → 🟥 far over</p>
+</div>
+      <div class="out" data-p="econ" hidden="">
+<div aria-label="Heatmap of how strongly demand, supply and expectations drove inflation in the 1970s, 2021, 2022 and 2024" class="hm" role="img">
+<span></span><span class="h">demand</span><span class="h">supply</span><span class="h">expect.</span>
+<span class="r">1970s</span><span class="c">🟧</span><span class="c">🟥</span><span class="c">🟥</span>
+<span class="r">2021</span><span class="c">🟨</span><span class="c">🟥</span><span class="c">🟩</span>
+<span class="r">2022</span><span class="c">🟧</span><span class="c">🟥</span><span class="c">🟨</span>
+<span class="r">2024</span><span class="c">🟨</span><span class="c">🟩</span><span class="c">🟩</span>
+</div>
+<p class="legend">🟩 weak → 🟥 strong</p>
+</div>
+      <div class="out" data-p="hegel" hidden="">
+<div aria-label="Heatmap of difficulty, how explicit the method is, and whether each work is a good entry point" class="hm" role="img">
+<span></span><span class="h">difficulty</span><span class="h">method</span><span class="h">entry</span>
+<span class="r">Phenomenology</span><span class="c">🟥</span><span class="c">🟧</span><span class="c">🟨</span>
+<span class="r">Science of Logic</span><span class="c">🟥</span><span class="c">🟩</span><span class="c">🟧</span>
+<span class="r">Encyclopaedia</span><span class="c">🟧</span><span class="c">🟩</span><span class="c">🟩</span>
+<span class="r">Phil. of Right</span><span class="c">🟨</span><span class="c">🟨</span><span class="c">🟩</span>
+</div>
+<p class="legend">🟩 reader-friendly → 🟥 hard going</p>
+</div>
+      <div class="out" data-p="delta">
+<div aria-label="Heatmap of log size, conflict risk and file churn for append, MERGE, OPTIMIZE and VACUUM" class="hm" role="img">
+<span></span><span class="h">log size</span><span class="h">conflict</span><span class="h">churn</span>
+<span class="r">append</span><span class="c">🟩</span><span class="c">🟩</span><span class="c">🟩</span>
+<span class="r">MERGE</span><span class="c">🟨</span><span class="c">🟥</span><span class="c">🟥</span>
+<span class="r">OPTIMIZE</span><span class="c">🟨</span><span class="c">🟧</span><span class="c">🟥</span>
+<span class="r">VACUUM</span><span class="c">🟩</span><span class="c">🟩</span><span class="c">🟧</span>
+</div>
+<p class="legend">🟩 low → 🟥 high</p>
+</div>
+    </div>
+    <div class="spec-data" data-spec="sparklines">
+      <span class="tag misfit" data-p="hegel" hidden="">poor fit here</span>
+      <p class="def">Tiny trend charts drawn with block characters, inline with the text.</p>
+      <div class="out" data-p="pct" hidden=""><pre>p50  ▁▁▁▁▂▁▁▁  steady all day
+p90  ▃▃▄▆█▇▄▃  spikes at peak hours</pre></div>
+      <div class="out" data-p="econ" hidden=""><pre>         2019–24
+CPI      ▂▁▅█▄▃  1.8% → 8.0% → 2.9%
+Fed      ▃▁▁▇█▇  0.25% → 5.50% (year-end)</pre></div>
+      <div class="out" data-p="hegel" hidden="">
+<p class="misfit-note">A dialectic has no series to plot. Forced, a model invents one:</p>
+<pre>difficulty  ▂▃▅▃▄▆█▅  (invented)</pre>
+</div>
+      <div class="out" data-p="delta"><pre>replay  ▁▂▃▃▄▅▆▆▇█▁▂▃▃▄▅▆▆▇█  checkpoint resets it
+        every ~10 commits (OSS)</pre></div>
+    </div>
+    <div class="spec-data" data-spec="tufte">
+      <p class="def">Edward Tufte's rule: maximize the data, cut the decoration.</p>
+      <div class="out" data-p="pct" hidden=""><pre>p50    105 ms    half are faster
+p90    400 ms    1 in 10 is slower
+mean   245 ms    skewed by one outlier</pre></div>
+      <div class="out" data-p="econ" hidden=""><pre>target    2% (Fed, ECB)
+peak      9.1% y/y, June 2022
+drivers   demand · supply · expectations
+tool      the policy rate</pre></div>
+      <div class="out" data-p="hegel" hidden=""><pre>moves    fix → negate → unite
+engine   determinate negation
+result   Aufhebung (cancel, keep, lift)
+not      thesis/antithesis/synthesis</pre></div>
+      <div class="out" data-p="delta"><pre>commit       1 JSON file per version
+checkpoint   ~10 commits (OSS default)
+retention    log 30 d, files 7 d</pre></div>
+    </div>
+    <div class="spec-data" data-spec="confidence">
+      <p class="def">Every claim labeled with how sure the model is.</p>
+      <p class="more">It separates what the evidence shows from what the model is guessing.</p>
+      <div class="out" data-p="pct" hidden=""><pre>p50 is the median                 <span class="c-high">[high]</span>
+p50 = 105 or 107.5, by method     <span class="c-med">[med]</span>
+users judge you by p90, not p50   <span class="c-low">[low]</span></pre></div>
+      <div class="out" data-p="econ" hidden=""><pre>too much demand can raise prices       <span class="c-high">[high]</span>
+2022 was mostly a supply shock         <span class="c-med">[med]</span>
+the next spike will come from energy   <span class="c-low">[low]</span></pre></div>
+      <div class="out" data-p="hegel" hidden=""><pre>driven by determinate negation           <span class="c-high">[high]</span>
+thesis–antithesis–synthesis isn't his    <span class="c-high">[high]</span>
+it works as well in nature as in logic   <span class="c-low">[low]</span></pre></div>
+      <div class="out" data-p="delta"><pre>one JSON commit per version      <span class="c-high">[high]</span>
+checkpoint every 10 commits      <span class="c-med">[med]</span>
+conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
+    </div>
+  </div>
+</section>
+
+<section class="wide" id="cut" aria-label="Cut the slop">
+  <p class="step"><span class="n">3</span>Cut the slop</p>
+  <div class="shred" id="shredder">
+    <div class="sh-head">
+      <span class="sh-title">Slop shredder</span>
+      <span class="sh-chip" id="sh-chip">Delta log</span>
+    </div>
+    <div class="sh-meter">
+      <div class="sh-count"><span class="sh-n" id="sh-n">358</span><span class="sh-unit">words</span><span class="sh-pct" id="sh-pct"></span></div>
+      <div class="sh-bar" id="sh-bar" role="img" aria-label="Share of the default answer that is left">
+        <span class="seg left" id="sh-seg-left" style="width:100%"></span><span class="seg keys" id="sh-seg-keys"></span><span class="seg filler" id="sh-seg-filler"></span>
+      </div>
+      <p class="sh-legend" id="sh-legend" aria-live="polite">A typical AI answer to a one-line question, with no keywords.</p>
+    </div>
+    <div class="sh-prompt">
+      <span class="sh-tag">Prompt</span>
+      <code class="sh-q" id="sh-q">Explain the Delta Lake transaction log.</code>
+      <code class="sh-fmt" id="sh-fmt" hidden></code>
+    </div>
+    <div class="out-body sh-body" id="sh-body"></div>
+    <div class="sh-actions">
+      <button class="btn primary sh-go" type="button" id="sh-go">✂ Cut the slop</button>
+      <button class="btn" type="button" id="sh-reset" hidden>↺ Start over</button>
+      <span class="sh-hint" id="sh-hint" hidden>Pick keywords in step 2 first.</span>
+      <a class="sh-next" id="sh-next" href="#pick-keywords" hidden>↑ Change your keywords</a>
+    </div>
+  </div>
+</section>
+
+<div class="article closing">
+  <p>Deleting filler gets you about a fifth of the way. The format does the rest.</p>
+</div>
+
+<script>
+(function () {
+  var ORDER = ['bluf','pyramid','fieldguide','telegraphic','hemingway','ste','layman','monospaced','glyphs','emoji','heatmap','sparklines','tufte','annotated','confidence','assumptions'];
+  var LABEL = {
+    bluf: 'BLUF', pyramid: 'pyramid principle', fieldguide: 'field guide',
+    telegraphic: 'telegraphic', hemingway: 'hemingway', ste: 'ASD-STE100',
+    monospaced: 'monospaced', glyphs: 'glyphs', emoji: 'emoji', heatmap: 'emoji heatmap',
+    sparklines: 'sparklines', tufte: 'tufte', confidence: 'confidence-tagged',
+    layman: 'layman', annotated: 'annotated', assumptions: 'labeled assumptions'
+  };
+  var REG_NAME = { telegraphic: 'Telegraphic', hemingway: 'Hemingway', ste: 'ASD-STE100', layman: 'Layman' };
+  var LAYERS = [
+    ['Structure', ['bluf','pyramid','fieldguide']],
+    ['Register', ['telegraphic','hemingway','ste','layman']],
+    ['Visual', ['monospaced','glyphs','emoji','heatmap','sparklines','tufte','annotated']],
+    ['Epistemics', ['confidence','assumptions']]
+  ];
+  var CUTTERS = ['bluf','pyramid','fieldguide','telegraphic','hemingway','ste','layman','tufte'];
+  var MINE = ['bluf','monospaced','glyphs','emoji','confidence'];
+
+  /* Hand-written parts. "base" is the default prose answer (blocks: p, h, ul; **bold**, *italic*, `code`).
+     The rest are the parts the keyword output is composed from. Register variants: default, telegraphic, hemingway, ste. */
+  var DATA = {
+    hegel: {
+      question: "Explain Hegel's dialectic.",
+      emojiLegend: '🟢 in Hegel\'s text · 🟡 needs interpretation · 🔴 common misreading',
+      suggested: { keys: ['bluf', 'fieldguide', 'telegraphic', 'monospaced', 'glyphs', 'emoji', 'confidence'],
+        why: "Abstract and often misread: the field guide names the look-alike, status colors flag Hegel's text vs. the misreading, the diagram shows the movement, and tags mark what's contested." },
+      misfit: { sparklines: "Sparklines need a series, and a dialectic has none. A model will invent one." },
+      base: [
+        ['p', "{{opener:Great question! Hegel's dialectic is one of the most influential, and most misunderstood, ideas in Western philosophy.}} {{signpost:Let's unpack it step by step.}}"],
+        ['h', "What is the dialectic?", '🧠'],
+        ['p', "{{hedge:At its core, }}Hegel's dialectic is a way of understanding how ideas, and in some sense reality itself, develop. Rather than treating concepts as fixed and static, Hegel argued that every concept contains tensions that drive it to change and grow.", 'high'],
+        ['h', "The three moments", '🔁'],
+        ['p', "In the *Encyclopaedia Logic* (§79–82), Hegel describes three sides of logical thought:"],
+        ['ul', [
+          ["**The understanding:** thought fixes a concept as stable and separate from its opposite.", 'high'],
+          ["**The dialectical moment:** thought through, the concept turns out to contain its opposite and passes over into it.", 'high'],
+          ["**The speculative moment:** reason grasps the unity of the opposites, producing a richer concept.", 'high']
+        ]],
+        ['h', "A common misconception", '⚠️'],
+        ['p', "{{hedge:It's worth noting that the|The}} dialectic is often summarized as \"thesis, antithesis, synthesis.\" However, this formula comes from Fichte and was popularized by Heinrich Moritz Chalybäus. Hegel rarely used these terms for his own method, and many scholars argue the formula oversimplifies his thinking.", 'high'],
+        ['h', "Key concept: Aufhebung", '💡'],
+        ['p', "An important term here is *Aufhebung*, usually translated as \"sublation.\" It has a {{hedge:fascinating }}double meaning in German: to cancel and to preserve. In the dialectic, an earlier stage is overcome, but what was true in it is kept in the higher stage.", 'high'],
+        ['h', "An example", '📘'],
+        ['p', "The opening of the *Science of Logic* is a classic example. Pure being, with no determinations at all, turns out to be indistinguishable from pure nothing. The truth of both is becoming, the movement in which each passes into the other.", 'high'],
+        ['h', "Why it matters", '🌍'],
+        ['p', "Hegel's dialectic has had an enormous influence on later thinkers, including Marx, who reworked it into a materialist dialectic, and the Frankfurt School.", 'med'],
+        ['p', "{{closer:I hope this helps! Let me know if you'd like me to go deeper into any part of the argument, or explore how Marx transformed Hegel's dialectic.}}"]
+      ],
+      context: {
+        "default": "Hegel's dialectic runs through his whole system, from the Phenomenology of Spirit to the Science of Logic, and it's often summarized in ways he wouldn't recognize.",
+        telegraphic: "Runs through whole system: Phenomenology, Logic. Often misdescribed.",
+        hemingway: "The dialectic runs through all of Hegel's work. It is also often described wrongly.",
+        ste: "The dialectic is in all the books of Hegel. Many persons describe it incorrectly."
+      },
+      answer: {
+        "default": "Hegel's dialectic is the self-movement of a concept: a one-sided idea, thought through, contradicts itself, and its determinate negation produces a richer idea that keeps what was true in the first.",
+        telegraphic: "Dialectic = concept's self-movement. One-sided idea contradicts itself. Determinate negation yields richer idea, keeps the true part.",
+        hemingway: "The dialectic is how an idea moves by itself. A one-sided idea, thought through, turns against itself. What comes out is richer, and it keeps what was true before.",
+        ste: "The dialectic is the movement of a concept. A concept that has one side only becomes opposite to itself. The result is a new concept. The new concept keeps the correct part of the old concept."
+      },
+      answerConf: 'high',
+      points: [
+        { status: '🟢', glyph: '→', conf: 'high', label: '§80  understanding fixes a concept',
+          "default": "First, the understanding fixes a concept as stable and separate from its opposite (Encyclopaedia §80).",
+          telegraphic: "Understanding fixes concept, separate from opposite (Enc. §80).",
+          hemingway: "First, the understanding holds an idea still. It keeps the idea apart from its opposite (§80).",
+          ste: "First, the understanding keeps the concept fixed and separate from its opposite (§80)." },
+        { status: '🟢', glyph: '→', conf: 'high', label: '§81  the concept negates itself',
+          "default": "Thought through, the fixed concept passes into its opposite, and this negation is determinate: it has a specific content (§81).",
+          telegraphic: "Thought through, concept passes into opposite. Negation determinate, has content (§81).",
+          hemingway: "Think the idea through and it turns into its opposite. This negation is not empty. It has a content (§81).",
+          ste: "When you examine the concept fully, it changes into its opposite. This negation has a specific content (§81)." },
+        { status: '🟡', glyph: '→', conf: 'med', label: '§82  result keeps both (Aufhebung)',
+          "default": "The speculative moment grasps the unity of the opposites, and the result sublates them, canceling, keeping, and lifting them at once (§82).",
+          telegraphic: "Speculative moment: unity of opposites. Aufhebung: cancel, keep, lift (§82).",
+          hemingway: "Then reason sees how the opposites belong together. The result cancels them, keeps them, and lifts them up (§82).",
+          ste: "Then reason finds the unity of the two opposites. The result cancels them, keeps them, and lifts them to a higher level (§82)." },
+        { status: '🔴', glyph: '✗', conf: 'high', label: 'not  thesis–antithesis–synthesis',
+          "default": "The familiar formula of thesis, antithesis, and synthesis isn't Hegel's. It comes from Fichte and Chalybäus.",
+          telegraphic: "Thesis-antithesis-synthesis: not Hegel. Fichte, Chalybäus.",
+          hemingway: "Thesis, antithesis, synthesis is not his formula. It comes from Fichte and Chalybäus.",
+          ste: "Thesis, antithesis, and synthesis is not the formula of Hegel. Fichte and Chalybäus used it." }
+      ],
+      fieldGuide: { title: 'Hegelian dialectic', rows: [
+        ['Field marks', 'determinate negation, Aufhebung, self-movement'],
+        ['Found in', 'Science of Logic, Encyclopaedia §79–82'],
+        ['Confused with', 'thesis–antithesis–synthesis (Fichte, Chalybäus)']
+      ] },
+      diagram: "being  ↔  nothing\n  └────┬─────┘\n   becoming ──→ determinate being ──→ …",
+      heat: { cols: ['difficulty', 'method', 'entry'], legend: '🟩 reader-friendly → 🟥 hard going', rows: [
+        ['Phenomenology', '🟥', '🟧', '🟨'], ['Science of Logic', '🟥', '🟩', '🟧'], ['Encyclopaedia', '🟧', '🟩', '🟩'], ['Phil. of Right', '🟨', '🟨', '🟩']
+      ] },
+      spark: "difficulty  ▂▃▅▃▄▆█▅  (invented)",
+      tufte: [['moves', 'fix → negate → unite'], ['engine', 'determinate negation'], ['result', 'Aufhebung (cancel, keep, lift)'], ['not', 'thesis/antithesis/synthesis']],
+      questions: ["If the negation is determinate, what exactly does it keep?", "Where does the contradiction come from, if not from outside the concept?"]
+    },
+    delta: {
+      question: "Explain the Delta Lake transaction log.",
+      emojiLegend: '🟢 guaranteed · 🟡 tunable default · 🔴 gotcha',
+      suggested: { keys: ['pyramid', 'telegraphic', 'monospaced', 'glyphs', 'emoji', 'heatmap'],
+        why: "Architecture with moving parts: a tree of the key facts with status colors for the gotchas, a drawing of the log on disk, and a map of which operations collide." },
+      misfit: {},
+      base: [
+        ['p', "{{opener:Great question! The Delta Lake transaction log is the heart of how Delta Lake brings reliability to data lakes.}} {{signpost:Let's walk through how it works step by step.}}"],
+        ['h', "What is the transaction log?", '📒'],
+        ['p', "The transaction log, often called the Delta log, is an ordered record of every change made to a Delta table. It lives in a folder called `_delta_log` at the root of the table, and it's what allows Delta Lake to provide ACID transactions on top of cloud object storage like S3, ADLS, or GCS.", 'high'],
+        ['h', "How commits work", '🔢'],
+        ['p', "Every time you write to a Delta table, whether it's an insert, update, delete, or merge, Delta records the change as a new JSON file in `_delta_log`. These files are numbered sequentially (`00000000000000000000.json`, `00000000000000000001.json`, and so on), and each one contains actions such as:", 'high'],
+        ['ul', [
+          ["**add:** a new data file was added to the table", 'high'],
+          ["**remove:** a data file is no longer part of the table", 'high'],
+          ["**metaData:** a change to the schema or table properties", 'high'],
+          ["**commitInfo:** details about the operation, such as who ran it and when", 'high']
+        ]],
+        ['h', "Concurrency control", '🤝'],
+        ['p', "Delta Lake uses optimistic concurrency control. Writers assume conflicts are rare, write their data files first, and then try to commit the next version. If two writers try to commit the same version, only one succeeds, and the other checks for conflicts and retries if it can.", 'high'],
+        ['h', "Checkpoints", '📌'],
+        ['p', "Replaying hundreds of JSON files would be slow, so by default Delta writes a Parquet checkpoint every 10 commits that captures the full state of the table. Readers start from the latest checkpoint and only replay the commits after it.", 'med'],
+        ['h', "Time travel", '⏳'],
+        ['p', "Because the log keeps a history of every version, you can query older versions of a table. {{hedge:It's worth noting, however, that }}VACUUM removes old data files (by default, those older than 7 days), which limits how far back you can go.", 'high'],
+        ['h', "Why it matters", '💡'],
+        ['p', "{{hedge:In many ways, the|The}} transaction log is what turns a folder of Parquet files into a reliable table, enabling ACID guarantees, auditing, and time travel.", 'med'],
+        ['p', "{{closer:I hope this helps! Let me know if you'd like to go deeper into checkpoints, concurrency conflicts, or time travel.}}"]
+      ],
+      context: {
+        "default": "Data lakes store tables as plain files in cloud object storage, which on its own offers no transactions, so concurrent writers and failed jobs can leave a table half-written.",
+        telegraphic: "Object storage: no transactions. Concurrent writers, failed jobs leave partial tables.",
+        hemingway: "A data lake keeps tables as plain files in cloud storage. That storage has no transactions. A failed job can leave a table half-written.",
+        ste: "A data lake keeps tables as files in cloud storage. This storage does not have transactions. If a job fails, the table can be incomplete."
+      },
+      answer: {
+        "default": "The transaction log is an ordered series of JSON commits in the table's _delta_log folder, and the table at any version is whatever those commits add and remove, which gives Delta atomic, isolated writes on plain object storage.",
+        telegraphic: "Ordered JSON commits in _delta_log. Table = replay of add/remove actions. Atomic, isolated writes on object storage.",
+        hemingway: "The log is a list of numbered JSON files in the _delta_log folder. Each file is one commit. Replay the commits and you get the table. That is what makes writes atomic.",
+        ste: "The transaction log is a sequence of JSON files in the _delta_log folder. Each file is one commit. The table is the result of all the commits. Thus, each write is complete or it does not occur."
+      },
+      answerConf: 'high',
+      points: [
+        { status: '🟢', glyph: '→', conf: 'high', label: 'commits   one JSON file per version',
+          "default": "Each commit is a JSON file named by its version number, like 00000000000000000042.json, listing actions such as add, remove, and metaData.",
+          telegraphic: "Commit = JSON file named by version (…0042.json). Actions: add, remove, metaData.",
+          hemingway: "Each commit is one JSON file, named by its version number. It lists actions: files added, files removed, schema changes.",
+          ste: "Each commit is one JSON file. The name of the file is the version number. The file lists actions, for example add and remove." },
+        { status: '🟢', glyph: '→', conf: 'high', label: 'writes    optimistic, one winner',
+          "default": "Writers use optimistic concurrency: they write data files first, then try to create the next version file, and only one writer can win each version.",
+          telegraphic: "Optimistic concurrency. Data files first, then claim next version. One winner per version.",
+          hemingway: "Writers don't lock the table. Each one writes its data files first. Then it tries to claim the next version number. Only one writer can win it.",
+          ste: "Writers do not lock the table. First, a writer writes the data files. Then it tries to make the next version file. Only one writer can make each version." },
+        { status: '🟡', glyph: '→', conf: 'med', label: 'ckpts     Parquet, ~every 10 commits',
+          "default": "Delta periodically writes a Parquet checkpoint of the full table state (every 10 commits by default in open-source Delta; Databricks tunes the frequency), so readers don't replay the whole log.",
+          telegraphic: "Parquet checkpoint ~every 10 commits (OSS default). Readers skip full replay.",
+          hemingway: "Every 10 commits or so, Delta writes a checkpoint in Parquet. It holds the whole table state. Readers start there instead of at commit zero.",
+          ste: "After each 10 commits, Delta writes a checkpoint file in Parquet. This file has the full state of the table. Readers start from this file." },
+        { status: '🔴', glyph: '✗', conf: 'high', label: 'limits    VACUUM ends time travel',
+          "default": "Time travel can read any older version still in the log, but VACUUM deletes unreferenced data files older than 7 days by default, which ends time travel past that point.",
+          telegraphic: "Time travel: old versions readable. VACUUM drops files >7 days (default). No travel past that.",
+          hemingway: "You can read old versions of the table. But VACUUM deletes old data files after 7 days by default. After that, those versions are gone.",
+          ste: "You can read old versions of the table. VACUUM deletes old data files after 7 days. After VACUUM, you cannot read those versions." }
+      ],
+      fieldGuide: { title: '_delta_log', rows: [
+        ['Field marks', 'numbered JSON commits, Parquet checkpoints'],
+        ['Found in', 'the root folder of every Delta table'],
+        ['Confused with', 'the Hive metastore']
+      ] },
+      diagram: "_delta_log/\n├─ …0040.checkpoint.parquet ─┐\n├─ …0041.json ───────────────┤\n├─ …0042.json ───────────────┤\n└─ _last_checkpoint          ↓\n                        snapshot v42",
+      heat: { cols: ['log size', 'conflict', 'churn'], legend: '🟩 low → 🟥 high', rows: [
+        ['append', '🟩', '🟩', '🟩'], ['MERGE', '🟨', '🟥', '🟥'], ['OPTIMIZE', '🟨', '🟧', '🟥'], ['VACUUM', '🟩', '🟩', '🟧']
+      ] },
+      spark: "replay  ▁▂▃▃▄▅▆▆▇█▁▂▃▃▄▅▆▆▇█  checkpoint resets it\n        every ~10 commits (OSS)",
+      tufte: [['commit', '1 JSON file per version'], ['checkpoint', '~10 commits (OSS default)'], ['log retention', '30 days'], ['VACUUM', '7 days'], ['stats', 'first 32 columns']],
+      questions: ["What happens if two writers both try to commit version 43?", "Why does a reader start from a checkpoint instead of version 0?"]
+    }
+  };
+  DATA.econ = {
+  "question": "What causes inflation?",
+  "emojiLegend": "🔴 big push in 2021–22 · 🟡 some push · 🟢 held it in check",
+  "suggested": {
+    "keys": [
+      "bluf",
+      "telegraphic",
+      "monospaced",
+      "glyphs",
+      "heatmap",
+      "sparklines",
+      "confidence"
+    ],
+    "why": "Several causes that change over time: draw the feedback loop, map which driver dominated each episode, chart the real CPI and rate series, and tag the contested claims."
+  },
+  "misfit": {},
+  "base": [
+    [
+      "p",
+      "{{opener:Great question! Inflation affects everyone, from grocery bills to mortgage rates,}} {{signpost:so let's break down what causes it step by step.}}"
+    ],
+    [
+      "h",
+      "What is inflation?",
+      "💸"
+    ],
+    [
+      "p",
+      "Inflation is a broad, sustained rise in the general level of prices. It's usually measured with the consumer price index (CPI), and most central banks, including the Federal Reserve and the European Central Bank, aim to keep it around 2% a year.",
+      "high"
+    ],
+    [
+      "h",
+      "The main causes",
+      "🔍"
+    ],
+    [
+      "p",
+      "Economists usually point to a few main drivers:"
+    ],
+    [
+      "ul",
+      [
+        [
+          "**Demand-pull inflation:** when spending grows faster than the economy can produce, sellers raise prices.",
+          "high"
+        ],
+        [
+          "**Cost-push inflation:** supply shocks, like higher energy prices or supply-chain disruptions, raise the cost of producing goods.",
+          "high"
+        ],
+        [
+          "**Expectations:** if people expect prices to rise, they ask for higher wages and set higher prices, which can make inflation persist.",
+          "med"
+        ]
+      ]
+    ],
+    [
+      "h",
+      "The role of money",
+      "🏦"
+    ],
+    [
+      "p",
+      "{{hedge:It's worth noting that over|Over}} the long run, sustained inflation generally needs growth in money and credit to fund it. Milton Friedman famously argued that inflation is always a monetary phenomenon, though many economists see the short run as more complicated.",
+      "med"
+    ],
+    [
+      "h",
+      "A recent example",
+      "📈"
+    ],
+    [
+      "p",
+      "In the United States, inflation rose sharply in 2021 and 2022, peaking at 9.1% in June 2022. Pandemic supply-chain problems, strong demand supported by stimulus and savings, and the energy shock after Russia's invasion of Ukraine all played a part.",
+      "high"
+    ],
+    [
+      "h",
+      "How central banks respond",
+      "⚖️"
+    ],
+    [
+      "p",
+      "To bring inflation down, central banks raise interest rates, which cools borrowing and spending. The Federal Reserve raised its policy rate from near zero in March 2022 to 5.25–5.50% by July 2023.",
+      "high"
+    ],
+    [
+      "p",
+      "{{closer:I hope this helps! Let me know if you'd like me to go deeper into how central banks fight inflation, or how it affects your savings.}}"
+    ]
+  ],
+  "context": {
+    "default": "Inflation is a broad, sustained rise in prices across the economy, usually measured by the consumer price index, and most central banks aim to keep it near 2% a year.",
+    "telegraphic": "Inflation = broad, sustained price rise. Measured by CPI. Target ~2%.",
+    "hemingway": "Inflation means prices rise across the economy and keep rising. The consumer price index measures it. Most central banks aim for about 2% a year.",
+    "ste": "Inflation is an increase of most prices that continues for a long time. The consumer price index measures it. Most central banks try to keep it near 2% each year."
+  },
+  "answer": {
+    "default": "Inflation is caused by spending growing faster than the economy can produce, by supply shocks that raise costs, and by expectations that keep price and wage increases going once they start.",
+    "telegraphic": "Causes: demand outruns supply, supply shocks raise costs, expectations keep it going.",
+    "hemingway": "Prices rise when people want more than the economy can make. Shocks to supply push costs up too. Once people expect higher prices, they keep the rise going.",
+    "ste": "Inflation has three causes. Demand is more than the economy can supply. Supply problems increase costs. People expect higher prices, and this keeps the increase going."
+  },
+  "answerConf": "high",
+  "points": [
+    {
+      "status": "🟡",
+      "glyph": "→",
+      "conf": "high",
+      "label": "demand   spending outruns output",
+      "default": "Demand-pull: when households, firms, and governments try to spend more than the economy can produce, sellers raise prices, as with the stimulus and pent-up savings of 2021.",
+      "telegraphic": "Demand-pull: spending outruns output. 2021: stimulus, savings.",
+      "hemingway": "Sometimes people try to buy more than the economy can make. Sellers raise prices. That happened in 2021, after stimulus and saved-up money.",
+      "ste": "Sometimes people want to buy more than the economy can make. Then sellers increase prices. This occurred in 2021."
+    },
+    {
+      "status": "🔴",
+      "glyph": "→",
+      "conf": "high",
+      "label": "supply   shocks raise costs",
+      "default": "Cost-push: supply shocks raise the cost of producing things, like the supply-chain snarls of 2021 and the energy spike after Russia invaded Ukraine in 2022.",
+      "telegraphic": "Cost-push: supply shocks raise costs. 2021 supply chains, 2022 energy.",
+      "hemingway": "Supply shocks make things cost more to produce. Ports jammed in 2021. Energy prices jumped in 2022, after Russia invaded Ukraine.",
+      "ste": "Supply problems increase the cost of production. In 2022, energy prices increased after Russia attacked Ukraine."
+    },
+    {
+      "status": "🟢",
+      "glyph": "→",
+      "conf": "med",
+      "label": "expect.  beliefs keep it going",
+      "default": "Expectations: if workers and firms expect prices to keep rising, they build that into wages and prices, so a temporary shock can become persistent.",
+      "telegraphic": "Expectations: anticipated inflation built into wages, prices. Shock becomes persistent.",
+      "hemingway": "If people expect prices to rise, they ask for higher pay and set higher prices. Then a short shock can last.",
+      "ste": "If people expect higher prices, they ask for more money. Then a short problem can continue for a long time."
+    },
+    {
+      "status": "🟢",
+      "glyph": "→",
+      "conf": "high",
+      "label": "rates    Fed: 0.25% → 5.50%",
+      "default": "Central banks fight it by raising interest rates: the Fed went from near zero in March 2022 to 5.25–5.50% by July 2023.",
+      "telegraphic": "Response: rate hikes. Fed near 0% (Mar 2022) to 5.25–5.50% (Jul 2023).",
+      "hemingway": "Central banks fight back by raising rates. The Fed went from near zero in March 2022 to over 5% by July 2023.",
+      "ste": "Central banks increase interest rates to decrease inflation. The Fed increased its rate from near zero in March 2022 to more than 5% in July 2023."
+    }
+  ],
+  "fieldGuide": {
+    "title": "Inflation",
+    "rows": [
+      [
+        "Field marks",
+        "a broad, persistent rise in prices"
+      ],
+      [
+        "Found in",
+        "CPI reports, wage talks, central bank statements"
+      ],
+      [
+        "Confused with",
+        "a one-off price jump in a single good"
+      ]
+    ]
+  },
+  "diagram": "demand ↑ ─┐\n          ├─→ prices ↑ ─→ expectations ↑\nsupply ↓ ─┘       ↑               │\n                  └───────────────┘",
+  "heat": {
+    "cols": [
+      "demand",
+      "supply",
+      "expect."
+    ],
+    "legend": "🟩 weak → 🟥 strong",
+    "rows": [
+      [
+        "1970s",
+        "🟧",
+        "🟥",
+        "🟥"
+      ],
+      [
+        "2021",
+        "🟨",
+        "🟥",
+        "🟩"
+      ],
+      [
+        "2022",
+        "🟧",
+        "🟥",
+        "🟨"
+      ],
+      [
+        "2024",
+        "🟨",
+        "🟩",
+        "🟩"
+      ]
+    ]
+  },
+  "spark": "         2019–24\nCPI      ▂▁▅█▄▃  1.8% → 8.0% → 2.9%\nFed      ▃▁▁▇█▇  0.25% → 5.50% (year-end)",
+  "tufte": [
+    [
+      "target",
+      "2% (Fed, ECB)"
+    ],
+    [
+      "peak",
+      "9.1% y/y, June 2022"
+    ],
+    [
+      "drivers",
+      "demand · supply · expectations"
+    ],
+    [
+      "tool",
+      "the policy rate"
+    ]
+  ],
+  "questions": [
+    "Why did 2022 inflation hit food and energy first?",
+    "If supply shocks fade on their own, why did central banks raise rates?"
+  ]
+};
+  DATA.pct = {
+  "question": "What do p50 and p90 mean?",
+  "emojiLegend": "🟢 typical case · 🟡 the tail · 🔴 misleading",
+  "suggested": {
+    "keys": [
+      "bluf",
+      "monospaced",
+      "glyphs",
+      "emoji",
+      "sparklines"
+    ],
+    "why": "A concept to finally get: the answer first, the sorted requests drawn on a line, status colors for what misleads, and a sparkline of what p50 hides."
+  },
+  "misfit": {},
+  "base": [
+    [
+      "p",
+      "{{opener:Great question! p50 and p90 are terms you'll often see in performance monitoring, and they're very useful once you understand them.}} {{signpost:Let's break them down step by step.}}"
+    ],
+    [
+      "h",
+      "What are percentiles?",
+      "📊"
+    ],
+    [
+      "p",
+      "A percentile tells you the value below which a given percentage of measurements fall. If you sort all your measurements from smallest to largest, the 50th percentile is the point halfway through the list, and the 90th percentile is the point 90% of the way through.",
+      "high"
+    ],
+    [
+      "h",
+      "p50: the median",
+      "⚖️"
+    ],
+    [
+      "p",
+      "p50, also called the median, means that half of your measurements are at or below this value and half are above it. For response times, it represents the typical experience of a user.",
+      "high"
+    ],
+    [
+      "h",
+      "p90: the tail",
+      "🐢"
+    ],
+    [
+      "p",
+      "p90 means that 90% of measurements are at or below this value. {{hedge:In other words, }}1 in 10 requests is slower than p90. It's a common way to capture the experience of your slower users.",
+      "high"
+    ],
+    [
+      "h",
+      "Why not just use the average?",
+      "🤔"
+    ],
+    [
+      "p",
+      "{{hedge:It's worth noting that averages|Averages}} can be misleading. A few very slow requests can pull the average up, so it may not reflect what most users actually experience. Percentiles give a much clearer picture of the distribution.",
+      "high"
+    ],
+    [
+      "h",
+      "An example",
+      "🧮"
+    ],
+    [
+      "p",
+      "Imagine 10 requests that took 80, 90, 95, 100, 105, 110, 120, 150, 400, and 1,200 milliseconds. The p50 is about 105 ms, the p90 is 400 ms, and the average is 245 ms, which is slower than eight of the ten requests.",
+      "med"
+    ],
+    [
+      "h",
+      "Why it matters",
+      "💡"
+    ],
+    [
+      "p",
+      "Many teams set their service level objectives on p90, p95, or p99 latency, because the tail is often where users feel the most pain.",
+      "med"
+    ],
+    [
+      "p",
+      "{{closer:I hope this helps! Let me know if you'd like me to explain p95 and p99, or how to calculate percentiles in SQL or Python.}}"
+    ]
+  ],
+  "context": {
+    "default": "p50 and p90 are percentiles, a way of summarizing a set of measurements, like request latencies, by where values fall once they're sorted from fastest to slowest.",
+    "telegraphic": "Percentiles: summarize measurements by sorted position.",
+    "hemingway": "p50 and p90 are percentiles. They describe a set of numbers by sorting them first.",
+    "ste": "p50 and p90 are percentiles. A percentile shows the position of a value in a sorted list."
+  },
+  "answer": {
+    "default": "p50 is the median: half your requests are faster than it. p90 is the value 90% of requests stay under, so the slowest 1 in 10 sit above it.",
+    "telegraphic": "p50 = median, half below. p90 = 90% below, slowest 10% above.",
+    "hemingway": "p50 is the middle request. Half are faster. Nine in ten are faster than p90. One in ten is slower.",
+    "ste": "p50 is the value in the middle. Half of the requests are faster. p90 is the value at 90%. One request in ten is slower."
+  },
+  "answerConf": "high",
+  "points": [
+    {
+      "status": "🟢",
+      "glyph": "→",
+      "conf": "high",
+      "label": "p50   median, half are faster",
+      "default": "p50 is the median: sort the values, and half sit at or below it. In the example, that's about 105 ms.",
+      "telegraphic": "p50 = median. Half at or below. Example: ~105 ms.",
+      "hemingway": "Sort the values. The middle one is p50. Here it is about 105 ms.",
+      "ste": "Sort the values. The value in the middle is p50. In this example, it is approximately 105 ms."
+    },
+    {
+      "status": "🟡",
+      "glyph": "→",
+      "conf": "high",
+      "label": "p90   1 in 10 is slower",
+      "default": "p90 is the value 90% of requests stay under, so 1 in 10 is slower. In the example, that's 400 ms, nearly four times the median.",
+      "telegraphic": "p90: 90% under, 1 in 10 slower. Example: 400 ms, ~4× median.",
+      "hemingway": "Nine in ten requests finish under p90. Here that is 400 ms. That is almost four times the median.",
+      "ste": "Nine of ten requests are faster than p90. In this example, p90 is 400 ms."
+    },
+    {
+      "status": "🔴",
+      "glyph": "✗",
+      "conf": "high",
+      "label": "mean  245 ms, skewed by an outlier",
+      "default": "The average is a poor summary here: one 1,200 ms request drags it to 245 ms, slower than eight of the ten requests.",
+      "telegraphic": "Mean misleads: one 1,200 ms outlier, mean 245 ms, worse than 8 of 10.",
+      "hemingway": "The average lies here. One slow request pulls it to 245 ms. That is slower than eight of the ten.",
+      "ste": "Do not use the average here. One slow request increases it to 245 ms."
+    },
+    {
+      "status": "🟡",
+      "glyph": "→",
+      "conf": "med",
+      "label": "gap   p50 vs p90 shows the tail",
+      "default": "The gap between p50 and p90 measures the tail: a wide gap means a minority of requests is much slower, which is where skew and timeouts show up.",
+      "telegraphic": "p50 to p90 gap = tail size. Wide gap: slow minority, skew, timeouts.",
+      "hemingway": "Look at the gap between p50 and p90. A wide gap means some requests are much slower. That is where problems hide.",
+      "ste": "Compare p50 and p90. If the difference is large, some requests are much slower."
+    }
+  ],
+  "fieldGuide": {
+    "title": "p90 latency",
+    "rows": [
+      [
+        "Field marks",
+        "a \"p\", a percentage, and a time in ms"
+      ],
+      [
+        "Found in",
+        "dashboards, SLOs, Spark task metrics"
+      ],
+      [
+        "Confused with",
+        "the average, or \"90% of the max\""
+      ]
+    ]
+  },
+  "diagram": "1   2   3   4   5   6   7   8   9   10\n●───●───●───●───●───●───●───●───●───●\n                ↑               ↑\n               p50             p90\n              105 ms          400 ms",
+  "heat": {
+    "cols": [
+      "p50",
+      "p90",
+      "p99"
+    ],
+    "legend": "🟩 under target → 🟥 far over",
+    "rows": [
+      [
+        "login",
+        "🟩",
+        "🟩",
+        "🟨"
+      ],
+      [
+        "search",
+        "🟩",
+        "🟨",
+        "🟥"
+      ],
+      [
+        "checkout",
+        "🟩",
+        "🟩",
+        "🟩"
+      ],
+      [
+        "report",
+        "🟨",
+        "🟥",
+        "🟥"
+      ]
+    ]
+  },
+  "spark": "p50  ▁▁▁▁▂▁▁▁  steady all day\np90  ▃▃▄▆█▇▄▃  spikes at peak hours",
+  "tufte": [
+    [
+      "p50",
+      "105 ms, half are faster"
+    ],
+    [
+      "p90",
+      "400 ms, 1 in 10 is slower"
+    ],
+    [
+      "mean",
+      "245 ms, skewed by one outlier"
+    ],
+    [
+      "max",
+      "1,200 ms"
+    ]
+  ],
+  "questions": [
+    "If p50 is 105 ms and p90 is 400 ms, what does 1 in 10 users feel?",
+    "Why can the average be slower than most of your requests?"
+  ]
+};
+
+  /* Layman rewrites, callout notes, annotated drawings and assumptions for the three newer keys. */
+  var EXTRA = {
+  "delta": {
+    "context": "A data lake keeps tables as ordinary files in cloud storage. On its own, that storage can't promise that a change either fully happens or doesn't, so a crashed job can leave a table half-updated.",
+    "answer": "The transaction log is a running diary of every change to the table, kept as numbered files in a folder next to the data. The table is whatever that diary says it is, which is why a change either fully happens or doesn't happen at all.",
+    "points": [
+      "Every change gets its own numbered entry in the diary, saying which data files were added and which were removed.",
+      "Writers don't lock the table. Each one prepares its files, then tries to claim the next page number in the diary, and only one can win it.",
+      "Every so often, Delta writes a summary page with the whole table's state, so readers don't have to reread the diary from page one.",
+      "You can look at older versions of the table, but cleanup (VACUUM) deletes old data files after 7 days by default, and then those versions are gone."
+    ],
+    "notes": [
+      "← the core idea",
+      "← where concurrent jobs collide",
+      "← keeps reads fast",
+      "← the classic surprise"
+    ],
+    "assumptions": [
+      "open-source Delta, default settings",
+      "one table, occasional writers"
+    ],
+    "diagramAnn": "_delta_log/\n├─ …0040.checkpoint.parquet   ← full table state\n├─ …0041.json                 ← one commit\n├─ …0042.json                 ← newest = current\n└─ _last_checkpoint           ← where to start"
+  },
+  "hegel": {
+    "context": "Hegel's dialectic runs through all of his major books, and it's often summed up in ways he wouldn't recognize.",
+    "answer": "Hegel's dialectic is how an idea grows on its own: take a one-sided idea seriously enough and it turns against itself, and what comes out of that clash is a fuller idea that keeps what was right in the first one.",
+    "points": [
+      "First, we pin an idea down and treat it as fixed, separate from its opposite (Encyclopaedia §80).",
+      "Think it all the way through and it flips into its opposite. That flip isn't just a no: it shows exactly what was missing (§81).",
+      "Then we see how the two opposites belong together, and the new idea drops what was wrong in both, keeps what was right, and lifts it to a higher level (§82).",
+      "The well-known thesis, antithesis, synthesis formula isn't Hegel's. It comes from Fichte and Chalybäus."
+    ],
+    "notes": [
+      "← where it starts",
+      "← the engine",
+      "← Aufhebung",
+      "← the usual mistake"
+    ],
+    "assumptions": [
+      "the logical dialectic (Encyclopaedia, Logic)",
+      "a general reader, not a specialist"
+    ],
+    "diagramAnn": "being  ↔  nothing     ← pass into each other\n  └────┬─────┘\n   becoming           ← their unity\n       │\ndeterminate being     ← becoming comes to rest"
+  },
+  "econ": {
+    "context": "Inflation means prices across the economy keep going up, not just the price of one thing. The usual yardstick is the consumer price index, and most central banks aim for about 2% a year.",
+    "answer": "Prices rise across the board when people try to buy more than the economy can make, when something like an energy shock makes things costlier to produce, or when everyone starts expecting higher prices and acts on it.",
+    "points": [
+      "When households, companies and governments all try to spend more than the economy can make, sellers raise prices, like in 2021 with stimulus checks and pandemic savings.",
+      "When making things gets more expensive, prices go up too, like jammed ports in 2021 and the energy spike after Russia invaded Ukraine in 2022.",
+      "If people expect prices to keep rising, workers ask for raises and companies raise prices in advance, so a short shock can stick around.",
+      "Central banks fight back by making borrowing more expensive: the Fed raised its rate from near zero in March 2022 to over 5% by July 2023."
+    ],
+    "notes": [
+      "← 2021",
+      "← 2022",
+      "← why it lingers",
+      "← the fix"
+    ],
+    "assumptions": [
+      "the US, last few decades",
+      "consumer prices, not asset prices"
+    ],
+    "diagramAnn": "demand ↑ ─┐                 ← 2021 stimulus\n          ├─→ prices ↑\nsupply ↓ ─┘                 ← 2022 energy shock\nprices ↑ ─→ expectations ↑  ← how it sticks"
+  },
+  "pct": {
+    "context": "p50 and p90 are percentiles: a way to describe a pile of measurements, like how long web requests take, by lining them up from fastest to slowest.",
+    "answer": "Line up all your requests from fastest to slowest. p50 is the one in the middle, so half are faster. p90 is the one 90% of the way down, so only 1 in 10 is slower.",
+    "points": [
+      "p50 is the middle of the line: half the requests are faster than it. In the example, that's about 105 ms.",
+      "p90 is near the end of the line: 9 out of 10 requests are faster. In the example, that's 400 ms, almost four times the middle.",
+      "The average misleads here: one very slow request (1,200 ms) drags it up to 245 ms, slower than 8 of the 10 requests.",
+      "The bigger the gap between p50 and p90, the more a small group of requests is suffering, and that's usually where the problems are."
+    ],
+    "notes": [
+      "← the typical request",
+      "← the tail starts here",
+      "← don't trust it",
+      "← where problems hide"
+    ],
+    "assumptions": [
+      "latency per request, in ms",
+      "a small example; real tools use far more requests"
+    ],
+    "diagramAnn": "80 90 95 100 105 110 120 150 400 1200 ms\n             ───             ───\n             p50 ← half are faster\n                             p90 ← 1 in 10 slower"
+  }
+};
+  var BEFORE_NEW = {"delta": {"annotated": "The checkpoint file holds the full table state, each JSON file is one commit, the newest one is the current version, and _last_checkpoint tells a reader where to start.", "assumptions": "A checkpoint is written every 10 commits, and conflicts will be rare."}, "hegel": {"annotated": "Being and nothing pass into each other, and their unity is becoming. Becoming then comes to rest as determinate being.", "assumptions": "The dialectic moves by determinate negation, not by a formula."}, "econ": {"annotated": "In 2021, stimulus pushed demand up, and in 2022 an energy shock cut supply. Both pushed prices up, and higher prices raised expectations, which is how inflation sticks.", "assumptions": "2022 inflation was mostly a supply shock."}, "pct": {"annotated": "Sorted from fastest to slowest, the ten requests take 80 to 1,200 ms. The 5th, 105 ms, is p50, so half are faster. The 9th, 400 ms, is p90, so 1 in 10 is slower.", "assumptions": "p50 is about 105 ms and p90 is 400 ms."}};
+  Object.keys(EXTRA).forEach(function (p) {
+    var e = EXTRA[p], D = DATA[p];
+    D.context.layman = e.context;
+    D.answer.layman = e.answer;
+    e.points.forEach(function (t, i) { D.points[i].layman = t; });
+    D.notes = e.notes;
+    D.assumptions = e.assumptions;
+    D.diagramAnn = e.diagramAnn;
+  });
+
+  var sel = new Set(MINE);
+  var problem = 'delta';
+
+  function $(id) { return document.getElementById(id); }
+  var qEl = $('line-q'), fEl = $('line-f'), covEl = $('coverage'), statusEl = $('status'), copyBtn = $('copy');
+  var outBody = $('out-body'), wcEl = $('wc'), wcBar = $('wc-bar');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.kw[data-kw]'));
+  var radios = Array.prototype.slice.call(document.querySelectorAll('input[name="problem"]'));
+  var perProblem = Array.prototype.slice.call(document.querySelectorAll('[data-p]'));
+  var lbDots = Array.prototype.slice.call(document.querySelectorAll('.lb-dots'));
+  var outPanel = $('output');
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function pad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
+  function widest(list) { return list.reduce(function (m, s) { return Math.max(m, s.length); }, 0); }
+  /* Count words per text node, so separate blocks (a sentence and the heading after it, heatmap cells) never merge into one "word". */
+  function countWords(node) {
+    var walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    var parts = [];
+    while (walker.nextNode()) parts.push(walker.currentNode.nodeValue);
+    return parts.join(' ').split(/\s+/).filter(function (w) { return /[A-Za-z0-9§]/.test(w); }).length;
+  }
+  var lastKwN = null, lastProblem = null;
+  /* Filler marks in the default answers: {{category:text}} or {{category:text|replacement}}.
+     mode: undefined shows the text as written, 'mark' wraps it for the shredder, 'cut' drops it. */
+  var SLOP_RE = /\{\{(\w+):([^|}]*)(?:\|([^}]*))?\}\}/g;
+  function wordsIn(s) { return String(s || '').split(/\s+/).filter(function (w) { return /[A-Za-z0-9§]/.test(w); }).length; }
+  function inline(parent, text, mode) {
+    var last = 0, m;
+    SLOP_RE.lastIndex = 0;
+    while ((m = SLOP_RE.exec(text))) {
+      if (m.index > last) inlineMd(parent, text.slice(last, m.index));
+      if (mode === 'mark') {
+        var s = el('span', 'slop');
+        s.setAttribute('data-cat', m[1]);
+        inlineMd(s, m[2]);
+        parent.appendChild(s);
+        if (m[3]) {
+          var r = el('span', 'repl');
+          r.setAttribute('aria-hidden', 'true');
+          inlineMd(r, m[3]);
+          parent.appendChild(r);
+        }
+      } else if (mode === 'cut') {
+        if (m[3]) inlineMd(parent, m[3]);
+      } else {
+        inlineMd(parent, m[2]);
+      }
+      last = SLOP_RE.lastIndex;
+    }
+    if (last < text.length) inlineMd(parent, text.slice(last));
+    return parent;
+  }
+  function inlineMd(parent, text) {
+    text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/).forEach(function (s) {
+      if (!s) return;
+      if (s.slice(0, 2) === '**') parent.appendChild(el('strong', null, s.slice(2, -2)));
+      else if (s.charAt(0) === '*') parent.appendChild(el('em', null, s.slice(1, -1)));
+      else if (s.charAt(0) === '`') parent.appendChild(el('code', null, s.slice(1, -1)));
+      else parent.appendChild(document.createTextNode(s));
+    });
+    return parent;
+  }
+  function tagSpan(c) { return el('span', 'ctag c-' + c, '[' + c + ']'); }
+  function appendTag(node, c) { node.appendChild(document.createTextNode(' ')); node.appendChild(tagSpan(c)); return node; }
+
+  /* The default prose answer. With only visual or confidence keywords, the model still writes it, reshaped. */
+  function renderBase(target, blocks, o, extras) {
+    blocks.forEach(function (b, i) {
+      if (extras && i === blocks.length - 1) extras();
+      if (b[0] === 'h') {
+        target.appendChild(el('h4', null, (o.emoji ? b[2] + ' ' : '') + b[1]));
+      } else if (b[0] === 'p') {
+        var p = inline(el(o.mono ? 'div' : 'p', o.mono ? 'tw' : null), b[1], o.slop);
+        if (o.conf && b[2]) appendTag(p, b[2]);
+        target.appendChild(p);
+      } else if (b[0] === 'ul') {
+        var ul = el('ul', 'pts');
+        b[1].forEach(function (it) {
+          var li = el('li');
+          li.appendChild(el('span', 'mk', o.glyphs ? '→' : '•'));
+          var s = inline(el('span'), it[0], o.slop);
+          if (o.conf && it[1]) appendTag(s, it[1]);
+          li.appendChild(s);
+          ul.appendChild(li);
+        });
+        target.appendChild(ul);
+      }
+    });
+  }
+
+  function analyze() {
+    var notes = [];
+    var conflict = new Set();
+    if (sel.has('bluf') && sel.has('pyramid')) {
+      notes.push({ type: 'conflict', text: 'BLUF and the pyramid principle overlap almost completely. One is enough.' });
+      conflict.add('bluf'); conflict.add('pyramid');
+    }
+    if (sel.has('pyramid') && sel.has('fieldguide')) {
+      notes.push({ type: 'conflict', text: 'The pyramid principle and field guide both want to organize the body. Pick one.' });
+      conflict.add('pyramid'); conflict.add('fieldguide');
+    }
+    var reg = Object.keys(REG_NAME).filter(function (k) { return sel.has(k); });
+    if (reg.length > 1) {
+      var names = reg.map(function (k) { return REG_NAME[k]; });
+      var joined = names.length === 2
+        ? names.join(' and ') + ' both control'
+        : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1] + ' all control';
+      notes.push({ type: 'conflict', text: joined + ' sentence style. Keep one.' });
+      reg.forEach(function (k) { conflict.add(k); });
+    }
+    if (sel.has('tufte') && sel.has('emoji')) {
+      notes.push({ type: 'tension', text: 'Tufte cuts decoration, so keep only emoji that carry data, like status colors.' });
+    }
+    if (sel.has('glyphs') && !sel.has('monospaced')) {
+      notes.push({ type: 'tension', text: 'Glyphs without monospaced: arrows and checks survive, but box drawings need a fixed-width canvas.' });
+    }
+    if (sel.size && !CUTTERS.some(function (k) { return sel.has(k); })) {
+      notes.push({ type: 'tension', text: "Visual keywords alone don't cut length. Add a structure or register keyword." });
+    }
+    var misfit = DATA[problem].misfit;
+    Object.keys(misfit).forEach(function (k) {
+      if (sel.has(k)) notes.push({ type: 'tension', text: misfit[k] });
+    });
+    return { notes: notes, conflict: conflict };
+  }
+
+  /* Compose the keyword answer for problem P with keyword set S into body.
+     opts.slop = 'cut' drops the filler from the default answer when visual-only keywords keep the prose.
+     Each block records the keywords that shaped it in data-k, so hovering a key can light it up. */
+  function compose(body, P, S, opts) {
+    function has(k) { return S.has(k); }
+    var mono = has('monospaced'), glyphs = has('glyphs'), emoji = has('emoji'), heat = has('heatmap'),
+        spark = has('sparklines'), tufte = has('tufte'), conf = has('confidence'),
+        bluf = has('bluf'), pyr = has('pyramid'), fg = has('fieldguide'),
+        ann = has('annotated'), asm = has('assumptions');
+    /* With clashing register keywords, the one picked last wins. */
+    var regs = Array.from(S).filter(function (k) { return REG_NAME[k]; });
+    var reg = regs.length ? regs[regs.length - 1] : 'default';
+    var regKey = reg === 'default' ? '' : reg;
+    var monoKey = mono ? 'monospaced' : '';
+    var verbose = !CUTTERS.some(has);
+    var lead = bluf || pyr;
+    body.innerHTML = '';
+    body.classList.toggle('is-mono', mono);
+
+    function mark(e, keys) {
+      var k = keys.filter(Boolean).join(' ');
+      if (k) e.setAttribute('data-k', k);
+      return e;
+    }
+    function T(o) { return o[reg] || o['default']; }
+    function addTag(e, c) {
+      if (conf) {
+        e.appendChild(document.createTextNode(' '));
+        e.appendChild(mark(tagSpan(c), ['confidence']));
+      }
+      return e;
+    }
+    function textBlock(t, cls, keys) {
+      var classes = [cls, mono ? 'tw' : ''].filter(Boolean).join(' ');
+      var e = mark(el(mono ? 'div' : 'p', classes || null, t), (keys || []).concat([monoKey]));
+      body.appendChild(e);
+      return e;
+    }
+    function preBlock(t, keys) {
+      var e = mark(el('pre', null, t), (keys || []).concat([monoKey]));
+      body.appendChild(e);
+      return e;
+    }
+    function pairs(rows, title, keys) {
+      if (mono) {
+        var w = widest(rows.map(function (r) { return r[0]; }));
+        var lines = rows.map(function (r) { return pad(r[0], w) + '   ' + r[1]; });
+        if (title) lines.unshift(title.toUpperCase());
+        return preBlock(lines.join('\n'), keys);
+      }
+      var wrap = body;
+      if (title) {
+        wrap = mark(el('div', 'fgbox'), keys);
+        wrap.appendChild(el('p', 'fg-title', title));
+        body.appendChild(wrap);
+      }
+      var dl = el('dl', title ? 'fg' : 'kv');
+      if (!title) mark(dl, keys);
+      rows.forEach(function (r) { dl.appendChild(el('dt', null, r[0])); dl.appendChild(el('dd', null, r[1])); });
+      wrap.appendChild(dl);
+      return dl;
+    }
+    function note(e, i) {
+      if (!ann) return e;
+      e.appendChild(document.createTextNode(' '));
+      e.appendChild(mark(el('span', 'ann', P.notes[i]), ['annotated']));
+      return e;
+    }
+    function assumptionsBlock() {
+      if (!asm) return;
+      if (mono) {
+        preBlock(P.assumptions.map(function (a) { return '[assumed] ' + a; }).join('\n'), ['assumptions']);
+        return;
+      }
+      var p = mark(el('p', 'assume'), ['assumptions']);
+      p.appendChild(el('strong', null, 'Assumed: '));
+      p.appendChild(document.createTextNode(P.assumptions.join('; ') + '.'));
+      body.appendChild(p);
+    }
+    function extras() {
+      if (glyphs && mono) {
+        if (ann) preBlock(P.diagramAnn, ['glyphs', 'annotated']);
+        else preBlock(P.diagram, ['glyphs']);
+      }
+      if (heat) {
+        var hb = mark(el('div', 'hmbox'), ['heatmap']);
+        var g = el('div', 'hm');
+        g.setAttribute('role', 'img');
+        g.setAttribute('aria-label', 'Heatmap of ' + P.heat.cols.join(', '));
+        g.appendChild(el('span'));
+        P.heat.cols.forEach(function (c) { g.appendChild(el('span', 'h', c)); });
+        P.heat.rows.forEach(function (r) {
+          g.appendChild(el('span', 'r', r[0]));
+          r.slice(1).forEach(function (c) { g.appendChild(el('span', 'c', c)); });
+        });
+        hb.appendChild(g);
+        hb.appendChild(el('p', 'legend', P.heat.legend));
+        body.appendChild(hb);
+      }
+      if (spark) preBlock(P.spark, ['sparklines']);
+    }
+
+    if (verbose) {
+      /* No structure, register or Tufte keyword: the full article, only reshaped. */
+      assumptionsBlock();
+      renderBase(body, P.base, { mono: mono, emoji: emoji, glyphs: glyphs, conf: conf, slop: opts && opts.slop }, extras);
+      Array.prototype.slice.call(body.children).forEach(function (c) {
+        if (c.hasAttribute('data-k')) return;
+        mark(c, [mono && c.classList.contains('tw') ? 'monospaced' : '', emoji && c.tagName === 'H4' ? 'emoji' : '', glyphs && c.tagName === 'UL' ? 'glyphs' : '']);
+      });
+      Array.prototype.slice.call(body.querySelectorAll('.ctag')).forEach(function (t) { mark(t, ['confidence']); });
+      return;
+    }
+
+    /* 1. Opening: the answer when it leads, otherwise the context */
+    if (lead) addTag(textBlock(T(P.answer), 'answer', [bluf ? 'bluf' : '', pyr ? 'pyramid' : '', regKey]), P.answerConf);
+    else if (!tufte) textBlock(T(P.context), null, [regKey]);
+    assumptionsBlock();
+
+    /* 2. Field guide block */
+    if (fg) pairs(P.fieldGuide.rows, P.fieldGuide.title, ['fieldguide']);
+
+    /* 3. Supporting points */
+    /* In a monospaced block, default and telegraphic both keep the short labels; full-grammar registers write sentences. */
+    var useLabels = tufte || (mono && (reg === 'default' || reg === 'telegraphic'));
+    var str = function (p) { return useLabels ? p.label : T(p); };
+    var pts = P.points;
+    var ptKeys = [pyr ? 'pyramid' : '', emoji ? 'emoji' : '', glyphs ? 'glyphs' : '', tufte ? 'tufte' : '', regKey];
+    if (mono && !useLabels) {
+      pts.forEach(function (p, i) {
+        var last = i === pts.length - 1;
+        var prefix = pyr ? (glyphs ? (last ? '└─ ' : '├─ ') : '  - ') : (emoji ? '' : (glyphs ? p.glyph + ' ' : '- '));
+        if (emoji) prefix += p.status + ' ';
+        note(addTag(textBlock(prefix + str(p), null, ptKeys), p.conf), i);
+      });
+    } else if (mono) {
+      var pw = widest(pts.map(str));
+      var pe = mark(el('pre'), ptKeys.concat([monoKey]));
+      pts.forEach(function (p, i) {
+        var last = i === pts.length - 1;
+        var prefix = '';
+        if (pyr) prefix += glyphs ? (last ? '└─ ' : '├─ ') : '  - ';
+        else if (!emoji) prefix += glyphs ? p.glyph + ' ' : '- ';
+        if (emoji) prefix += p.status + ' ';
+        var t = str(p);
+        pe.appendChild(document.createTextNode(prefix + (conf ? pad(t, pw) + '  ' : t)));
+        if (conf) pe.appendChild(mark(tagSpan(p.conf), ['confidence']));
+        if (ann) {
+          /* the note goes on its own line under the label, keeping the tree trunk */
+          var lead = pyr ? (glyphs ? 3 : 4) : 0;
+          var trunk = pyr ? (glyphs && !last ? '│  ' : pad('', lead)) : '';
+          pe.appendChild(document.createTextNode('\n' + trunk + pad('', prefix.length - lead)));
+          pe.appendChild(mark(el('span', 'ann', P.notes[i].replace(/^← /, '↑ ')), ['annotated']));
+        }
+        if (!last) pe.appendChild(document.createTextNode('\n'));
+      });
+      body.appendChild(pe);
+    } else if (lead || emoji || glyphs || tufte) {
+      var ul = mark(el('ul', 'pts' + (pyr ? ' nested' : '')), ptKeys);
+      pts.forEach(function (p, i) {
+        var li = el('li');
+        li.appendChild(el('span', 'mk', emoji ? p.status : (glyphs ? p.glyph : '•')));
+        li.appendChild(note(addTag(el('span', null, str(p)), p.conf), i));
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    } else {
+      var para = mark(el('p'), ptKeys);
+      pts.forEach(function (p, i) {
+        if (i) para.appendChild(document.createTextNode(' '));
+        para.appendChild(document.createTextNode(str(p)));
+        addTag(para, p.conf);
+        note(para, i);
+      });
+      body.appendChild(para);
+    }
+
+    if (emoji && P.emojiLegend) body.appendChild(mark(el('p', 'legend', P.emojiLegend), ['emoji']));
+
+    /* 4. Visual extras */
+    extras();
+    if (tufte) pairs(P.tufte, null, ['tufte']);
+
+    /* 5. Closing: the answer when it didn't lead */
+    if (!lead) addTag(textBlock(T(P.answer), 'answer', [regKey]), P.answerConf);
+  }
+
+  function renderOutput() {
+    var P = DATA[problem];
+    var body = outBody;
+    compose(body, P, sel);
+
+    var base = el('div');
+    renderBase(base, P.base, {});
+    var kwN = countWords(body), baseN = countWords(base);
+    var change = '';
+    if (lastKwN !== null && lastProblem === problem && kwN !== lastKwN) {
+      change = ' (' + (kwN > lastKwN ? '+' : '−') + Math.abs(kwN - lastKwN) + ')';
+    }
+    lastKwN = kwN; lastProblem = problem;
+    wcEl.textContent = kwN + ' words' + change;
+    wcBar.textContent = kwN + ' vs ' + baseN + ' words' + change;
+    if (outPanel) {
+      outPanel.classList.remove('flash');
+      void outPanel.offsetWidth;
+      outPanel.classList.add('flash');
+    }
+  }
+
+  function isStack(keys) {
+    return keys.length === sel.size && keys.every(function (k) { return sel.has(k); });
+  }
+
+  function render() {
+    var a = analyze();
+
+    radios.forEach(function (r) {
+      r.checked = r.value === problem;
+      r.closest('.prob').classList.toggle('on', r.checked);
+    });
+    perProblem.forEach(function (node) { node.hidden = node.getAttribute('data-p') !== problem; });
+
+    buttons.forEach(function (b) {
+      var k = b.getAttribute('data-kw');
+      b.setAttribute('aria-pressed', sel.has(k) ? 'true' : 'false');
+      b.classList.toggle('conflict', a.conflict.has(k));
+      b.classList.toggle('misfit', !!DATA[problem].misfit[k]);
+      if (DATA[problem].misfit[k]) b.setAttribute('title', DATA[problem].misfit[k]); else b.removeAttribute('title');
+    });
+
+    qEl.textContent = DATA[problem].question;
+    var picked = ORDER.filter(function (k) { return sel.has(k); }).map(function (k) { return LABEL[k]; });
+    fEl.innerHTML = '';
+    fEl.appendChild(document.createTextNode('Format: '));
+    if (picked.length) fEl.appendChild(document.createTextNode(picked.join(', ')));
+    else fEl.appendChild(el('span', 'empty', '…'));
+
+    covEl.innerHTML = '';
+    var covered = 0;
+    LAYERS.forEach(function (layer, li) {
+      var name = layer[0], keys = layer[1];
+      var n = keys.filter(function (k) { return sel.has(k); }).length;
+      if (n) covered++;
+      function dotsInto(target) {
+        target.innerHTML = '';
+        keys.forEach(function (k) { target.appendChild(el('span', sel.has(k) ? 'on' : null, sel.has(k) ? '●' : '○')); });
+      }
+      var wrap = el('span', 'cov');
+      wrap.setAttribute('aria-label', name + ': ' + n + ' of ' + keys.length + ' picked');
+      var dots = el('span');
+      dotsInto(dots);
+      wrap.appendChild(el('span', null, name));
+      wrap.appendChild(dots);
+      covEl.appendChild(wrap);
+      if (lbDots[li]) {
+        dotsInto(lbDots[li]);
+        lbDots[li].setAttribute('aria-label', n + ' of ' + keys.length + ' picked');
+      }
+    });
+
+    statusEl.innerHTML = '';
+    function addNote(type, glyph, text) {
+      var s = el('span', 'note ' + type);
+      s.appendChild(el('span', 'g', glyph));
+      s.appendChild(document.createTextNode(text));
+      statusEl.appendChild(s);
+    }
+    if (swapNote) {
+      addNote('ok', '⇄', swapNote);
+      swapNote = '';
+    }
+    if (!sel.size) {
+      addNote('tension', '·', 'No keywords: this is the default answer.');
+    } else {
+      var conflicts = a.notes.filter(function (n) { return n.type === 'conflict'; });
+      if (isStack(DATA[problem].suggested.keys)) addNote('ok', '★', 'Suggested stack for this problem.');
+      else if (isStack(MINE)) addNote('ok', '★', 'My daily stack.');
+      if (!conflicts.length) addNote('ok', '✓', 'Stacks cleanly across ' + covered + ' of 4 layers.');
+      a.notes.forEach(function (n) { addNote(n.type, n.type === 'conflict' ? '!' : '◐', n.text); });
+    }
+
+    renderOutput();
+    if (sh) shRefresh();
+    if (dEls) {
+      renderDetail(focusKey, false);
+      if (hoverKey) lightOutput(hoverKey);
+    }
+  }
+
+  /* Picking a problem loads its suggested stack and resets step 4. */
+  function selectProblem(key) {
+    problem = key;
+    sel = new Set(DATA[key].suggested.keys);
+    render();
+    shReset();
+  }
+  radios.forEach(function (r) {
+    r.addEventListener('change', function () { if (r.checked) selectProblem(r.value); });
+  });
+  /* Keys that shape the same part of the answer: picking one drops the others. */
+  var CONFLICTS = { bluf: ['pyramid'], pyramid: ['bluf', 'fieldguide'], fieldguide: ['pyramid'] };
+  Object.keys(REG_NAME).forEach(function (k) {
+    CONFLICTS[k] = Object.keys(REG_NAME).filter(function (o) { return o !== k; });
+  });
+  var swapNote = '';
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-kw');
+      if (sel.has(k)) {
+        sel.delete(k);
+      } else {
+        var dropped = (CONFLICTS[k] || []).filter(function (o) { return sel.has(o); });
+        dropped.forEach(function (o) { sel.delete(o); });
+        sel.add(k);
+        if (dropped.length) {
+          swapNote = cap(LABEL[k]) + ' replaced ' + dropped.map(function (o) { return LABEL[o]; }).join(' and ') + '. They shape the same part of the answer.';
+        }
+      }
+      render();
+    });
+  });
+  $('mine').addEventListener('click', function () { sel = new Set(MINE); render(); });
+  $('suggested').addEventListener('click', function () { sel = new Set(DATA[problem].suggested.keys); render(); });
+  $('clear').addEventListener('click', function () { sel = new Set(); render(); });
+
+  function selectLine() {
+    try {
+      var r = document.createRange();
+      r.selectNodeContents(fEl);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      copyBtn.textContent = 'Selected';
+    } catch (e) {}
+    setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1800);
+  }
+  copyBtn.addEventListener('click', function () {
+    var text = fEl.textContent;
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        copyBtn.textContent = 'Copied';
+        setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1600);
+      }, selectLine);
+    } catch (e) { selectLine(); }
+  });
+
+  /* ---------- Slop shredder ---------- */
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  var sh = {
+    body: $('sh-body'), n: $('sh-n'), pct: $('sh-pct'), legend: $('sh-legend'), q: $('sh-q'), fmt: $('sh-fmt'),
+    go: $('sh-go'), reset: $('sh-reset'), next: $('sh-next'), hint: $('sh-hint'), bar: $('sh-bar'), chip: $('sh-chip'),
+    left: $('sh-seg-left'), keys: $('sh-seg-keys'), filler: $('sh-seg-filler'),
+    state: 0, gen: 0, busy: false, counts: null, tally: null, shownStack: ''
+  };
+  var SHORT = { delta: 'Delta log', hegel: 'Hegel', econ: 'Inflation', pct: 'p50/p90' };
+  var CAT_LABEL = { opener: 'opener', signpost: 'signpost', hedge: 'hedges', closer: 'closer' };
+  function later(ms, gen, fn) {
+    setTimeout(function () { if (gen === sh.gen) fn(); }, reduceMotion ? Math.min(ms, 80) : ms);
+  }
+  function tick(from, to, ms) {
+    if (reduceMotion || typeof requestAnimationFrame !== 'function') { sh.n.textContent = to; return; }
+    var t0 = null, gen = sh.gen;
+    function step(t) {
+      if (gen !== sh.gen) return;
+      if (t0 === null) t0 = t;
+      var k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+      sh.n.textContent = Math.round(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  function setBar(left, keys, filler) {
+    sh.left.style.width = (left * 100) + '%';
+    sh.keys.style.width = (keys * 100) + '%';
+    sh.filler.style.width = (filler * 100) + '%';
+    sh.keys.classList.toggle('on', keys > 0);
+    sh.filler.classList.toggle('on', filler > 0);
+    sh.bar.setAttribute('aria-label', Math.round(left * 100) + '% of the default answer is left');
+  }
+  function pctOf(part, whole) { return Math.round(part / whole * 100); }
+  function legendItem(cls, text) {
+    var it = el('span', 'it');
+    it.appendChild(el('span', 'sw ' + cls));
+    it.appendChild(document.createTextNode(text));
+    return it;
+  }
+  function shCounts(P, S) {
+    var a = el('div'); renderBase(a, P.base, {});
+    var b = el('div'); renderBase(b, P.base, { slop: 'cut' });
+    var c = el('div'); compose(c, P, S, { slop: 'cut' });
+    return { full: countWords(a), cut: countWords(b), kw: countWords(c) };
+  }
+  function stackLabel(S) {
+    return ORDER.filter(function (k) { return S.has(k); }).map(function (k) { return LABEL[k]; }).join(', ');
+  }
+  function shGoState() {
+    var empty = !sel.size;
+    sh.go.disabled = sh.busy || empty;
+    sh.hint.hidden = !(sh.state === 1 && empty);
+  }
+  function shCutLegend(c) {
+    var cats = Object.keys(CAT_LABEL).filter(function (k) { return sh.tally[k] > 0; })
+      .map(function (k) { return CAT_LABEL[k] + ' ' + sh.tally[k]; }).join(' · ');
+    sh.legend.innerHTML = '';
+    sh.legend.appendChild(legendItem('filler', 'Filler: −' + (c.full - c.cut) + ' words (' + pctOf(c.full - c.cut, c.full) + '%)'));
+    sh.legend.appendChild(el('span', 'cats', cats));
+  }
+  function shFinalLegend(c) {
+    var d = c.cut - c.kw;
+    sh.legend.innerHTML = '';
+    sh.legend.appendChild(legendItem('filler', 'Filler −' + (c.full - c.cut) + ' (' + pctOf(c.full - c.cut, c.full) + '%)'));
+    sh.legend.appendChild(legendItem('keys', d > 0 ? 'Keywords −' + d + ' (' + pctOf(d, c.full) + '%)' : d === 0 ? 'Keywords cut nothing' : 'Keywords +' + (-d) + ' (they added words)'));
+    sh.legend.appendChild(legendItem('left', c.kw + ' left'));
+  }
+  function shFinalBar(c) {
+    setBar(Math.min(c.kw, c.cut) / c.full, Math.max(0, c.cut - c.kw) / c.full, (c.full - c.cut) / c.full);
+    sh.pct.textContent = c.kw <= c.full ? '−' + pctOf(c.full - c.kw, c.full) + '%' : '+' + pctOf(c.kw - c.full, c.full) + '%';
+  }
+  /* Step 4 without animation in the "filler cut" state, used when the stack is cleared after the keywords step. */
+  function shShowCut() {
+    var P = DATA[problem], c = sh.counts = shCounts(P, sel);
+    sh.body.innerHTML = '';
+    sh.body.classList.remove('is-mono');
+    renderBase(sh.body, P.base, { slop: 'cut' });
+    sh.fmt.hidden = true;
+    sh.n.textContent = c.cut;
+    sh.pct.textContent = '−' + pctOf(c.full - c.cut, c.full) + '%';
+    setBar(c.cut / c.full, 0, 1 - c.cut / c.full);
+    shCutLegend(c);
+    sh.state = 1;
+    sh.go.textContent = '⚙ Apply your keywords';
+    sh.go.classList.add('kw-step');
+    sh.go.hidden = false;
+    sh.next.hidden = true;
+    shGoState();
+  }
+  /* Keyword changes after the cut update step 4 in place. */
+  function shRefresh() {
+    if (sh.busy) return;
+    if (sh.state === 1) { shGoState(); return; }
+    if (sh.state !== 2) return;
+    if (!sel.size) { shShowCut(); return; }
+    var P = DATA[problem], c = sh.counts = shCounts(P, sel);
+    compose(sh.body, P, sel, { slop: 'cut' });
+    sh.shownStack = stackLabel(sel);
+    sh.fmt.textContent = 'Format: ' + sh.shownStack;
+    sh.n.textContent = c.kw;
+    shFinalBar(c);
+    shFinalLegend(c);
+  }
+  function shTally(P) {
+    var t = {};
+    P.base.forEach(function (b) {
+      if (b[0] !== 'p') return;
+      var m;
+      SLOP_RE.lastIndex = 0;
+      while ((m = SLOP_RE.exec(b[1]))) t[m[1]] = (t[m[1]] || 0) + wordsIn(m[2]) - wordsIn(m[3]);
+    });
+    return t;
+  }
+  function isAllSlop(block) {
+    var c = block.cloneNode(true);
+    Array.prototype.slice.call(c.querySelectorAll('.slop, .repl')).forEach(function (s) { s.parentNode.removeChild(s); });
+    return block.querySelector('.slop') && !c.textContent.trim();
+  }
+  function collapse(block) {
+    block.style.height = block.offsetHeight + 'px';
+    block.style.overflow = 'hidden';
+    void block.offsetHeight;
+    if (!reduceMotion) block.style.transition = 'height .5s ease, margin .5s ease, opacity .4s ease';
+    block.style.height = '0px';
+    block.style.marginBottom = '0px';
+    block.style.opacity = '0';
+    block.setAttribute('data-collapsed', '');
+  }
+
+  function shReset() {
+    sh.gen++;
+    var P = DATA[problem];
+    sh.counts = shCounts(P, sel);
+    sh.tally = shTally(P);
+    sh.state = 0;
+    sh.busy = false;
+    sh.chip.textContent = SHORT[problem];
+    sh.body.innerHTML = '';
+    sh.body.classList.remove('is-mono', 'fading');
+    sh.body.style.height = sh.body.style.overflow = sh.body.style.transition = '';
+    renderBase(sh.body, P.base, { slop: 'mark' });
+    sh.q.textContent = P.question;
+    sh.fmt.hidden = true;
+    sh.fmt.textContent = '';
+    sh.n.textContent = sh.counts.full;
+    sh.pct.textContent = '';
+    setBar(1, 0, 0);
+    sh.legend.textContent = 'A typical AI answer to a one-line question, with no keywords.';
+    sh.go.textContent = '✂ Cut the slop';
+    sh.go.classList.remove('kw-step');
+    sh.go.hidden = false;
+    sh.go.disabled = false;
+    sh.reset.hidden = true;
+    sh.next.hidden = true;
+    sh.hint.hidden = true;
+  }
+
+  function shCut() {
+    var gen = sh.gen, c = sh.counts;
+    sh.busy = true;
+    sh.go.disabled = true;
+    var spans = Array.prototype.slice.call(sh.body.querySelectorAll('.slop'));
+    var step = 240;
+    spans.forEach(function (s, i) { later(i * step, gen, function () { s.classList.add('hit'); }); });
+    later(spans.length * step + 900, gen, function () {
+      spans.forEach(function (s) {
+        s.classList.add('gone');
+        var r = s.nextSibling;
+        if (r && r.classList && r.classList.contains('repl')) { r.classList.add('in'); r.removeAttribute('aria-hidden'); }
+      });
+      Array.prototype.slice.call(sh.body.children).forEach(function (b) { if (isAllSlop(b)) collapse(b); });
+      tick(c.full, c.cut, 750);
+      sh.pct.textContent = '−' + pctOf(c.full - c.cut, c.full) + '%';
+      setBar(c.cut / c.full, 0, 1 - c.cut / c.full);
+      later(800, gen, function () {
+        spans.forEach(function (s) { if (s.parentNode) s.parentNode.removeChild(s); });
+        Array.prototype.slice.call(sh.body.querySelectorAll('[data-collapsed]')).forEach(function (b) { b.parentNode.removeChild(b); });
+        shCutLegend(c);
+        sh.state = 1;
+        sh.busy = false;
+        sh.go.textContent = '⚙ Apply your keywords';
+        sh.go.classList.add('kw-step');
+        sh.reset.hidden = false;
+        shGoState();
+        later(1400, gen, function () {
+          Array.prototype.slice.call(sh.body.querySelectorAll('.repl.in')).forEach(function (r) { r.classList.add('settled'); });
+        });
+      });
+    });
+  }
+
+  function shCompress() {
+    if (!sel.size) return;
+    var gen = sh.gen, P = DATA[problem], b = sh.body;
+    var c = sh.counts = shCounts(P, sel);
+    sh.busy = true;
+    sh.go.disabled = true;
+    var h0 = b.offsetHeight;
+    b.style.height = h0 + 'px';
+    b.style.overflow = 'hidden';
+    b.classList.add('fading');
+    later(270, gen, function () {
+      compose(b, P, sel, { slop: 'cut' });
+      b.style.height = 'auto';
+      var h1 = b.offsetHeight;
+      b.style.height = h0 + 'px';
+      void b.offsetHeight;
+      if (!reduceMotion) b.style.transition = 'height .6s cubic-bezier(.2,.8,.2,1), opacity .3s ease';
+      b.style.height = h1 + 'px';
+      b.classList.remove('fading');
+      sh.shownStack = stackLabel(sel);
+      sh.fmt.textContent = 'Format: ' + sh.shownStack;
+      sh.fmt.hidden = false;
+      tick(c.cut, c.kw, 750);
+      shFinalBar(c);
+      later(650, gen, function () {
+        b.style.height = b.style.overflow = b.style.transition = '';
+        shFinalLegend(c);
+        sh.state = 2;
+        sh.busy = false;
+        sh.go.hidden = true;
+        sh.reset.hidden = false;
+        sh.next.hidden = false;
+        if (stackLabel(sel) !== sh.shownStack) shRefresh(); /* the stack changed mid-animation */
+      });
+    });
+  }
+
+  sh.go.addEventListener('click', function () {
+    if (sh.go.disabled) return;
+    if (sh.state === 0) shCut();
+    else if (sh.state === 1) shCompress();
+  });
+  sh.reset.addEventListener('click', shReset);
+
+  /* ---------- Keyboard: detail panel and output highlights ---------- */
+  var KEY_LAYER = {};
+  LAYERS.forEach(function (l) { l[1].forEach(function (k) { KEY_LAYER[k] = l[0]; }); });
+  var specData = {};
+  Array.prototype.slice.call(document.querySelectorAll('#spec-data [data-spec]')).forEach(function (s) {
+    specData[s.getAttribute('data-spec')] = s;
+  });
+  var dEls = {
+    name: $('d-name'), layer: $('d-layer'), tags: $('d-tags'), def: $('d-def'), more: $('d-more'),
+    state: $('d-state'), before: $('d-before'), after: $('d-after'), replay: $('d-replay')
+  };
+  var focusKey = ORDER.filter(function (k) { return sel.has(k); })[0] || 'bluf';
+  var hoverKey = null, dGen = 0;
+  /* The same facts as each keyword's sample, in plain prose: what the answer looks like without that keyword. */
+  var BEFORE = {
+  "delta": {
+    "bluf": "Writers append to the log one version at a time, and readers replay it to get a snapshot. In the end, the ordered list of JSON commits is what defines the table.",
+    "pyramid": "Each commit is one JSON file named by its version, and only one writer can create each version. Checkpoints keep replays short. Together, this turns plain files into a table with transactions.",
+    "fieldguide": "The transaction log is made of numbered JSON commits and Parquet checkpoints. It lives in the root folder of every Delta table, and people often confuse it with the Hive metastore.",
+    "monospaced": "Each commit lists actions. Add means a new data file, remove means a file leaves the table, metaData holds the schema and properties, protocol sets the reader and writer versions, and commitInfo records who did what and when.",
+    "glyphs": "The _delta_log folder holds a checkpoint at version 40, commits 41 and 42, and a _last_checkpoint file that points to the checkpoint. A reader starts from the checkpoint and replays 41 and 42 to get the snapshot at version 42.",
+    "emoji": "Commits are atomic even on object storage. Overlapping writes can conflict, and VACUUM ends time travel.",
+    "heatmap": "Appends write small commits, rarely conflict and rewrite few files. MERGE writes medium commits, conflicts the most and rewrites the most files. OPTIMIZE also rewrites many files and can conflict, while VACUUM writes little to the log but deletes old files.",
+    "sparklines": "The cost of reading the log grows with every commit after the last checkpoint and drops back each time a new checkpoint is written, about every 10 commits in open-source Delta.",
+    "tufte": "Each version is one JSON commit. Checkpoints come about every 10 commits by default in open-source Delta, and the log is kept for 30 days while removed files are kept for 7.",
+    "confidence": "Each version is one JSON commit, a checkpoint comes every 10 commits, and conflicts will be rare for you."
+  },
+  "hegel": {
+    "bluf": "Each one-sided idea, pushed far enough, turns into its opposite, and what comes out keeps both. That is how a concept develops: by running into its own limits.",
+    "pyramid": "Understanding fixes a concept as stable and one-sided. Thought through, the concept passes into its opposite, and the result keeps what was true in both. So the dialectic is the concept's own movement, not a method applied from outside.",
+    "fieldguide": "Hegel's dialectic is marked by determinate negation, Aufhebung and the concept's self-movement. It is laid out in the Science of Logic and in §79–82 of the Encyclopaedia, and it is often confused with thesis–antithesis–synthesis, which comes from Fichte and Chalybäus.",
+    "monospaced": "In §80 the understanding fixes a concept. In §81 the dialectical moment negates it, and in §82 the speculative moment unites the opposites.",
+    "glyphs": "Being and nothing pass into each other, and their unity is becoming. Becoming then settles into determinate being, and the movement goes on from there.",
+    "emoji": "The dialectic is driven by determinate negation, and its result keeps both sides. Thesis–antithesis–synthesis is Fichte's formula, not Hegel's.",
+    "heatmap": "The Phenomenology and the Science of Logic are the hardest to read. The Science of Logic and the Encyclopaedia state the method most clearly, and the Encyclopaedia and the Philosophy of Right are the easiest places to start.",
+    "sparklines": "The dialectic is a movement of concepts. Nothing in it changes over time in a way you could plot.",
+    "tufte": "The dialectic fixes a concept, negates it, and unites the opposites. Determinate negation drives it, and the result is Aufhebung, which cancels, keeps and lifts. It is not thesis, antithesis and synthesis.",
+    "confidence": "The dialectic is driven by determinate negation, and thesis–antithesis–synthesis isn't Hegel's formula. It works as well in nature as in logic."
+  },
+  "econ": {
+    "bluf": "Sometimes spending outruns what the economy can produce, and sometimes supply shocks push costs up. Expectations decide whether the jump fades or sticks. Either way, that is when inflation happens.",
+    "pyramid": "Spending can outrun output, which is demand-pull. Shocks can raise costs, like energy in 2022, which is cost-push. Wages and prices can also build in more inflation. So inflation comes from too much demand, too little supply, or expectations that feed on themselves.",
+    "fieldguide": "Inflation is a broad, persistent rise in prices. It shows up in CPI reports, wage talks and central bank statements, and it is often confused with a one-off price jump in a single good.",
+    "monospaced": "Demand-pull inflation showed up in 2021 with stimulus and savings, cost-push in the 2022 energy shock, and expectations in the wage-price spiral of the 1970s.",
+    "glyphs": "Rising demand or falling supply pushes prices up. Higher prices raise expectations, and higher expectations push prices up again.",
+    "emoji": "Headline CPI peaked at 9.1% in June 2022. Core prices are slower to cool, and long-run expectations are anchored.",
+    "heatmap": "In the 1970s, supply shocks and expectations drove inflation hard, with demand behind them. In 2021 and 2022, supply did most of the pushing while demand grew, and by 2024 supply and expectations had calmed.",
+    "sparklines": "US inflation went from 1.8% in 2019 to 8.0% in 2022 and back to 2.9% in 2024, while the Fed's year-end rate went from 0.25% to 5.50%.",
+    "tufte": "The Fed and the ECB target 2% inflation. US inflation peaked at 9.1% year over year in June 2022, driven by demand, supply and expectations, and the main tool against it is the policy rate.",
+    "confidence": "Too much demand can raise prices, 2022 was mostly a supply shock, and the next spike will come from energy."
+  },
+  "pct": {
+    "bluf": "Averages hide both the typical case and the tail. Two numbers show them instead: p50 is the median, so half your requests are faster, and p90 is the line the slowest 10% cross.",
+    "pyramid": "p50 has half the values at or below it, which makes it the median. p90 has 90% at or below it, so 1 in 10 is slower. The gap between them shows how bad the tail is, which is why percentiles describe the spread, not just the middle.",
+    "fieldguide": "You can recognize p90 latency by a \"p\", a percentage and a time in ms. It shows up in dashboards, SLOs and Spark task metrics, and it is often confused with the average or with 90% of the max.",
+    "monospaced": "The mean is 245 ms but skewed by outliers. p50 is 105 ms, so half the requests are faster, p90 is 400 ms, so 1 in 10 is slower, and the worst request took 1,200 ms.",
+    "glyphs": "Sort the ten requests from fastest to slowest. The 5th one, 105 ms, is p50, and the 9th one, 400 ms, is p90.",
+    "emoji": "At 105 ms, p50 shows the typical request is fine. At 400 ms, p90 means 1 in 10 waits about four times longer, and the max of 1,200 ms is 11 times the median.",
+    "heatmap": "Checkout stays under target at every percentile, and login only slips at p99. Search is fine at p50 but slips at p90 and is far over at p99, and report is already over target at p50 and far over above it.",
+    "sparklines": "p50 stays steady all day, while p90 spikes at peak hours.",
+    "tufte": "p50 is 105 ms, so half the requests are faster. p90 is 400 ms, so 1 in 10 is slower, and the mean of 245 ms is skewed by one outlier.",
+    "confidence": "p50 is the median. It comes out as 105 or 107.5 depending on the method, and users judge you by p90, not p50."
+  }
+};
+
+  function norm(w) { return w.toLowerCase().replace(/[^a-z0-9§%]/g, ''); }
+  /* The opening of the default answer, filler already cut: the "before" for every keyword. */
+  function beforeSnippet(P) {
+    for (var i = 0; i < P.base.length; i++) {
+      var b = P.base[i];
+      if (b[0] !== 'p') continue;
+      var t = inline(el('p'), b[1], 'cut').textContent.trim();
+      if (!t) continue;
+      var sentences = t.match(/[^.!?]+[.!?]+["”’)]*/g) || [t];
+      var out = '';
+      for (var j = 0; j < sentences.length; j++) {
+        out += sentences[j];
+        if (wordsIn(out) >= 18) break;
+      }
+      return out.trim();
+    }
+    return '';
+  }
+  function finishDetail() {
+    dGen++;
+    Array.prototype.slice.call(dEls.before.querySelectorAll('.w.cut')).forEach(function (w) { w.classList.add('struck'); });
+    dEls.before.classList.add('dim');
+    dEls.after.classList.add('show');
+  }
+  function playDetail() {
+    var gen = ++dGen;
+    var cuts = Array.prototype.slice.call(dEls.before.querySelectorAll('.w.cut'));
+    cuts.forEach(function (w) { w.classList.remove('struck'); });
+    dEls.before.classList.remove('dim');
+    dEls.after.classList.remove('show');
+    if (reduceMotion) { finishDetail(); return; }
+    var stepMs = Math.max(25, Math.min(90, Math.round(1200 / Math.max(1, cuts.length))));
+    cuts.forEach(function (w, i) {
+      setTimeout(function () { if (gen === dGen) w.classList.add('struck'); }, 250 + i * stepMs);
+    });
+    setTimeout(function () {
+      if (gen !== dGen) return;
+      dEls.before.classList.add('dim');
+      dEls.after.classList.add('show');
+    }, 250 + cuts.length * stepMs + 250);
+  }
+  function renderDetail(key, animate) {
+    var spec = specData[key];
+    if (!spec) return;
+    focusKey = key;
+    buttons.forEach(function (b) { b.classList.toggle('is-on', b.getAttribute('data-kw') === key); });
+    dEls.name.textContent = LABEL[key];
+    dEls.layer.textContent = KEY_LAYER[key];
+    dEls.tags.innerHTML = '';
+    Array.prototype.slice.call(spec.querySelectorAll('.tag')).forEach(function (t) {
+      var p = t.getAttribute('data-p');
+      if (p && p !== problem) return;
+      var c = t.cloneNode(true);
+      c.removeAttribute('hidden');
+      dEls.tags.appendChild(c);
+    });
+    var def = spec.querySelector('.def'), more = spec.querySelector('.more');
+    dEls.def.innerHTML = def ? def.innerHTML : '';
+    dEls.more.innerHTML = more ? more.innerHTML : '';
+    dEls.more.hidden = !more;
+    var on = sel.has(key);
+    dEls.state.textContent = on ? '● In your stack' : '○ Not in your stack. Press the key to add it.';
+    dEls.state.classList.toggle('on', on);
+    /* Register keys rewrite the same sentence, so the words they drop can be struck out.
+       Every other key reshapes the answer instead: the default fades and the shaped sample appears. */
+    var P = DATA[problem], before, keep = null;
+    dEls.after.innerHTML = '';
+    if (REG_NAME[key]) {
+      before = P.points[0]['default'];
+      var box = el('div', 'out prose');
+      box.appendChild(el('p', null, P.points[0][key]));
+      dEls.after.appendChild(box);
+      keep = {};
+      P.points[0][key].split(/\s+/).forEach(function (w) { var n = norm(w); if (n) keep[n] = true; });
+    } else {
+      before = (BEFORE[problem] && BEFORE[problem][key]) || (BEFORE_NEW[problem] && BEFORE_NEW[problem][key]) || beforeSnippet(P);
+      var sample = spec.querySelector('.out[data-p="' + problem + '"]');
+      if (sample) {
+        var copy = sample.cloneNode(true);
+        copy.removeAttribute('hidden');
+        dEls.after.appendChild(copy);
+      }
+    }
+    dEls.before.innerHTML = '';
+    before.split(/\s+/).forEach(function (w) {
+      if (!w) return;
+      dEls.before.appendChild(el('span', 'w' + (keep && !keep[norm(w)] ? ' cut' : ''), w));
+      dEls.before.appendChild(document.createTextNode(' '));
+    });
+    if (animate) playDetail(); else finishDetail();
+  }
+  function lightOutput(key) {
+    Array.prototype.slice.call(outBody.querySelectorAll('.lit')).forEach(function (e) { e.classList.remove('lit'); });
+    if (!key) return;
+    Array.prototype.slice.call(outBody.querySelectorAll('[data-k~="' + key + '"]')).forEach(function (e) { e.classList.add('lit'); });
+  }
+  buttons.forEach(function (b) {
+    var k = b.getAttribute('data-kw');
+    function enter() {
+      hoverKey = k;
+      if (k !== focusKey) renderDetail(k, false);
+      lightOutput(k);
+    }
+    function leave() {
+      if (hoverKey === k) hoverKey = null;
+      lightOutput(null);
+    }
+    b.addEventListener('mouseenter', enter);
+    b.addEventListener('focus', enter);
+    b.addEventListener('mouseleave', leave);
+    b.addEventListener('blur', leave);
+    /* runs after the toggle handler registered earlier */
+    b.addEventListener('click', function () {
+      renderDetail(k, true);
+      lightOutput(k);
+    });
+  });
+  dEls.replay.addEventListener('click', playDetail);
+
+  render();
+  shReset();
+})();
+</script>
+</body>
+</html>
