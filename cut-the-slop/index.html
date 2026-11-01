@@ -412,6 +412,16 @@ body h1 + p { margin-top: 32px; }
 body h2 { display: inline-block; background: #B8F27C; border: 2px solid #111111; box-shadow: 4px 4px 0 #111111; padding: 2px 12px 4px; }
 body .bar { border-top-width: 3px; }
 
+/* Bonus: a copyable prompt card */
+.bonus { margin-top: 72px; }
+.prompt-card { margin: 28px 0 0; background: #FFFFFF; border: 2px solid #111111; border-radius: 8px; box-shadow: 6px 6px 0 #111111; overflow: hidden; overflow: clip; }
+.bonus h2 + .prompt-card { margin-top: 8px; }
+.pc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; background: #FFD23F; border-bottom: 2px solid #111111; }
+.pc-tag { font-family: var(--font-label); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.09em; text-transform: uppercase; }
+.pc-head .btn { box-shadow: 3px 3px 0 #111111; }
+.pc-text { margin: 0; padding: 18px 20px 20px; font-family: var(--font-mono); font-size: 0.875rem; line-height: 1.75; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .pc-text { padding: 14px 14px 16px; } }
+
 </style>
 </head>
 <body>
@@ -945,6 +955,18 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
 
 <div class="article closing">
   <p>Deleting filler gets you about a fifth of the way. The format does the rest.</p>
+</div>
+
+<div class="article section bonus" id="bonus">
+  <h2>Bonus</h2>
+  <figure class="prompt-card">
+    <div class="pc-head"><span class="pc-tag">Write like a person</span><button class="btn primary pc-copy" type="button">Copy</button></div>
+    <p class="pc-text">Write like a person talking, not a document. Use plain words and short sentences, and vary their length. Skip filler openers ("Great question", "Here's a breakdown"), hedging stacks, and wrap-up summaries. Don't use em dashes, buzzwords ("delve", "leverage", "robust", "seamless"), or rule-of-three lists for rhythm. Use contractions. Prefer prose over bullets and headers unless the content is actually a list. Say what you think directly, and admit uncertainty plainly ("not sure", "I think") instead of padding it. Read it back as if you were texting a smart coworker. If it sounds like a press release, rewrite it.</p>
+  </figure>
+  <figure class="prompt-card">
+    <div class="pc-head"><span class="pc-tag">Write concisely</span><button class="btn primary pc-copy" type="button">Copy</button></div>
+    <p class="pc-text">Write concisely, sacrifice grammar for the sake of brevity</p>
+  </figure>
 </div>
 
 <script>
@@ -2134,6 +2156,22 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
         setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1600);
       }, selectLine);
     } catch (e) { selectLine(); }
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.prompt-card'), function (card) {
+    var btn = card.querySelector('.pc-copy'), text = card.querySelector('.pc-text');
+    btn.addEventListener('click', function () {
+      var done = function (label) { btn.textContent = label; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); };
+      var fallback = function () {
+        try {
+          var r = document.createRange(); r.selectNodeContents(text);
+          var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+          done('Selected');
+        } catch (e) {}
+      };
+      try { navigator.clipboard.writeText(text.textContent).then(function () { done('Copied'); }, fallback); }
+      catch (e) { fallback(); }
+    });
   });
 
   /* ---------- Slop shredder ---------- */
