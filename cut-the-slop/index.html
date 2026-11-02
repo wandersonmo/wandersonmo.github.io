@@ -317,13 +317,8 @@ h2 {
 .d-before .w { border-radius: 2px; }
 .d-before .w.struck { color: var(--muted); background: var(--slop-soft); text-decoration: line-through; text-decoration-color: var(--slop); text-decoration-thickness: 2px; }
 .d-before.dim { opacity: 0.6; }
-.d-after { min-width: 0; opacity: 0; transform: translateY(6px); }
-.d-after.show { opacity: 1; transform: none; }
-.d-replay { justify-self: start; }
+.d-after { min-width: 0; }
 @media (prefers-reduced-motion: no-preference) {
-  .d-before .w { transition: color 0.2s ease, background-color 0.2s ease; }
-  .d-before { transition: opacity 0.3s ease; }
-  .d-after { transition: opacity 0.35s ease, transform 0.35s ease; }
   #out-body > *, #out-body .ctag { transition: background-color 0.15s ease, box-shadow 0.15s ease; }
 }
 #out-body .lit { background-color: var(--on-soft); box-shadow: 0 0 0 3px var(--on); border-radius: 4px; }
@@ -571,7 +566,6 @@ body .bar { border-top-width: 3px; }
         <p class="d-cap">With this keyword</p>
         <div class="d-after" id="d-after"></div>
       </div>
-      <button class="btn d-replay" type="button" id="d-replay">↻ Replay</button>
     </div>
     <div class="output-panel" id="output">
     <div class="output-head">
@@ -2097,7 +2091,7 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
     renderOutput();
     if (sh) shRefresh();
     if (dEls) {
-      renderDetail(focusKey, false);
+      renderDetail(focusKey);
       if (hoverKey) lightOutput(hoverKey);
     }
   }
@@ -2420,10 +2414,10 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
   });
   var dEls = {
     name: $('d-name'), layer: $('d-layer'), tags: $('d-tags'), def: $('d-def'), more: $('d-more'),
-    state: $('d-state'), before: $('d-before'), after: $('d-after'), replay: $('d-replay')
+    state: $('d-state'), before: $('d-before'), after: $('d-after')
   };
   var focusKey = ORDER.filter(function (k) { return sel.has(k); })[0] || 'bluf';
-  var hoverKey = null, dGen = 0;
+  var hoverKey = null;
   /* The same facts as each keyword's sample, in plain prose: what the answer looks like without that keyword. */
   var BEFORE = {
   "delta": {
@@ -2495,29 +2489,10 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
     return '';
   }
   function finishDetail() {
-    dGen++;
     Array.prototype.slice.call(dEls.before.querySelectorAll('.w.cut')).forEach(function (w) { w.classList.add('struck'); });
     dEls.before.classList.add('dim');
-    dEls.after.classList.add('show');
   }
-  function playDetail() {
-    var gen = ++dGen;
-    var cuts = Array.prototype.slice.call(dEls.before.querySelectorAll('.w.cut'));
-    cuts.forEach(function (w) { w.classList.remove('struck'); });
-    dEls.before.classList.remove('dim');
-    dEls.after.classList.remove('show');
-    if (reduceMotion) { finishDetail(); return; }
-    var stepMs = Math.max(25, Math.min(90, Math.round(1200 / Math.max(1, cuts.length))));
-    cuts.forEach(function (w, i) {
-      setTimeout(function () { if (gen === dGen) w.classList.add('struck'); }, 250 + i * stepMs);
-    });
-    setTimeout(function () {
-      if (gen !== dGen) return;
-      dEls.before.classList.add('dim');
-      dEls.after.classList.add('show');
-    }, 250 + cuts.length * stepMs + 250);
-  }
-  function renderDetail(key, animate) {
+  function renderDetail(key) {
     var spec = specData[key];
     if (!spec) return;
     focusKey = key;
@@ -2565,7 +2540,7 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
       dEls.before.appendChild(el('span', 'w' + (keep && !keep[norm(w)] ? ' cut' : ''), w));
       dEls.before.appendChild(document.createTextNode(' '));
     });
-    if (animate) playDetail(); else finishDetail();
+    finishDetail();
   }
   function lightOutput(key) {
     Array.prototype.slice.call(outBody.querySelectorAll('.lit')).forEach(function (e) { e.classList.remove('lit'); });
@@ -2576,7 +2551,7 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
     var k = b.getAttribute('data-kw');
     function enter() {
       hoverKey = k;
-      if (k !== focusKey) renderDetail(k, false);
+      if (k !== focusKey) renderDetail(k);
       lightOutput(k);
     }
     function leave() {
@@ -2589,11 +2564,10 @@ conflicts will be rare for you   <span class="c-low">[low]</span></pre></div>
     b.addEventListener('blur', leave);
     /* runs after the toggle handler registered earlier */
     b.addEventListener('click', function () {
-      renderDetail(k, true);
+      renderDetail(k);
       lightOutput(k);
     });
   });
-  dEls.replay.addEventListener('click', playDetail);
 
   render();
   shReset();
